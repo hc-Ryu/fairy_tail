@@ -23,13 +23,13 @@ Multi-agent deliberation system for Claude Code - structured debate between Clau
 ### Via Plugin (Recommended)
 
 ```bash
-/plugin install ahnjundaram/synod
+/plugin install quantsquirrel/synod
 ```
 
 ### Manual Installation
 
 ```bash
-git clone https://github.com/ahnjundaram/synod.git
+git clone https://github.com/quantsquirrel/synod.git
 cd synod
 pip install -r requirements.txt
 cp skills/*.md ~/.claude/commands/
@@ -206,7 +206,7 @@ If `synod-parser` is not found:
 |-------|----------|
 | `API key not found` | Export required API keys (see Configuration section) |
 | `No such file or directory: ~/.synod/sessions` | Create directory: `mkdir -p ~/.synod/sessions` |
-| `Command not found: /synod` | Install plugin via `/plugin install ahnjundaram/synod` |
+| `Command not found: /synod` | Install plugin via `/plugin install quantsquirrel/synod` |
 | `Timeout after 3 retries` | Check network connection and API service status |
 
 ## Advanced Configuration
@@ -249,20 +249,20 @@ export SYNOD_RETENTION_DAYS=30  # Delete sessions older than 30 days
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2026 ahnjundaram
+Copyright (c) 2026 quantsquirrel
 
 ## Contributing
 
 Issues, bug reports, and pull requests welcome!
 
-- **Issues**: https://github.com/ahnjundaram/synod/issues
-- **Discussions**: https://github.com/ahnjundaram/synod/discussions
-- **Repository**: https://github.com/ahnjundaram/synod
+- **Issues**: https://github.com/quantsquirrel/synod/issues
+- **Discussions**: https://github.com/quantsquirrel/synod/discussions
+- **Repository**: https://github.com/quantsquirrel/synod
 
 ### Development Setup
 
 ```bash
-git clone https://github.com/ahnjundaram/synod.git
+git clone https://github.com/quantsquirrel/synod.git
 cd synod
 pip install -r requirements-dev.txt
 pytest tests/
@@ -275,9 +275,9 @@ If you use Synod in research or production, please cite:
 ```bibtex
 @software{synod2026,
   title = {Synod: Multi-Agent Deliberation System for Claude Code},
-  author = {Ahnjundaram},
+  author = {quantsquirrel},
   year = {2026},
-  url = {https://github.com/ahnjundaram/synod}
+  url = {https://github.com/quantsquirrel/synod}
 }
 ```
 
@@ -293,6 +293,6 @@ Synod builds on research from:
 
 For questions and support:
 
-- GitHub Discussions: https://github.com/ahnjundaram/synod/discussions
-- Report bugs: https://github.com/ahnjundaram/synod/issues
+- GitHub Discussions: https://github.com/quantsquirrel/synod/discussions
+- Report bugs: https://github.com/quantsquirrel/synod/issues
 - Email: Open an issue for contact information

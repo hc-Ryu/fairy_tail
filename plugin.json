@@ -2,9 +2,9 @@
   "name": "synod",
   "version": "3.0.0",
   "description": "Multi-agent deliberation system with Claude, Gemini, and OpenAI - structured debate for better decisions",
-  "author": "ahnjundaram",
+  "author": "quantsquirrel",
   "license": "MIT",
-  "homepage": "https://github.com/ahnjundaram/synod",
+  "homepage": "https://github.com/quantsquirrel/synod",
   "keywords": [
     "claude-code",
     "multi-agent",
