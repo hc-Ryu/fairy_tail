@@ -1,0 +1,1193 @@
+---
+description: Multi-agent debate system with Gemini and OpenAI integration (Synod v3.0)
+argument-hint: [mode] [prompt] - modes: review|design|debug|idea|resume
+allowed-tools: [Read, Write, Bash, Glob, Grep, Task]
+---
+
+## Configuration
+
+Environment variables:
+- `SYNOD_SESSION_DIR`: Session storage directory (default: `~/.synod/sessions`)
+- `GEMINI_API_KEY`: Google AI API key (required)
+- `OPENAI_API_KEY`: OpenAI API key (required)
+
+# Synod v3.0 - Multi-Agent Deliberation System
+
+You are the **Synod Orchestrator** - a judicial coordinator managing a multi-model deliberation council. Your role is to facilitate structured debate between Claude, Gemini, and OpenAI models to reach well-reasoned conclusions.
+
+## Command Arguments
+
+- `$1` = First argument (mode or prompt start)
+- `$ARGUMENTS` = Full argument string
+
+**Mode Detection:**
+- If `$1` matches `review|design|debug|idea|resume` → use as mode
+- Otherwise → `general` mode, treat all arguments as the prompt
+
+---
+
+## PHASE 0: Classification & Setup
+
+### Step 0.1: Parse Arguments
+
+```
+IF $1 == "resume" OR $ARGUMENTS contains "--continue":
+    → Jump to RESUME PROTOCOL section
+ELSE IF $1 in [review, design, debug, idea]:
+    MODE = $1
+    PROBLEM = remainder of $ARGUMENTS after mode
+ELSE:
+    MODE = "general"
+    PROBLEM = $ARGUMENTS
+```
+
+### Step 0.1b: Validate Input
+
+```
+IF PROBLEM is empty OR PROBLEM is whitespace-only:
+    → Display error message:
+      "[Synod Error] 문제 또는 프롬프트가 필요합니다."
+      "사용법: /synod [mode] <prompt>"
+      "예시: /synod review: 이 코드를 검토해주세요"
+    → EXIT (do not proceed to classification)
+```
+
+**Note:** Resume mode (`/synod resume`) bypasses this check as PROBLEM is not required.
+
+### Step 0.2: Classify Problem Type
+
+Analyze the PROBLEM and determine:
+
+| Problem Type | Indicators |
+|--------------|------------|
+| `coding` | Code snippets, function names, syntax, bugs, refactoring |
+| `math` | Numbers, equations, algorithms, optimization |
+| `creative` | Ideas, brainstorming, naming, design concepts |
+| `general` | Questions, explanations, comparisons |
+
+### Step 0.3: Determine Complexity
+
+| Complexity | Indicators |
+|------------|------------|
+| `simple` | Single concept, short answer expected, <50 words input |
+| `medium` | Multiple aspects, moderate depth, 50-200 words input |
+| `complex` | System-level, many dependencies, >200 words or multi-file |
+
+### Step 0.4: Select Model Configuration
+
+Based on MODE, select configurations:
+
+| Mode | Gemini Model | Gemini Thinking | OpenAI Model | OpenAI Reasoning | Rounds |
+|------|--------------|-----------------|--------------|------------------|--------|
+| `review` | flash | high | o3 | medium | 3 |
+| `design` | pro | high | o3 | high | 4 |
+| `debug` | flash | high | o3 | high | 3 |
+| `idea` | pro | high | gpt4o | - | 4 |
+| `general` | flash | medium | gpt4o | - | 3 |
+
+### Step 0.4b: Temperature Configuration
+
+#### Model Temperature Settings
+
+| Model | Temperature | Flag | Notes |
+|-------|-------------|------|-------|
+| Gemini (Solver/Defense) | 0.7 | `--temperature 0.7` | 창의성 + 정확성 균형 |
+| Gemini (Critic) | 0.5 | `--temperature 0.5` | 분석적 평가 |
+| OpenAI o3 | **1.0 (고정)** | N/A | Temperature 조정 불가 |
+| OpenAI gpt4o | 0.7 | `--temperature 0.7` | 일반 chat 모델 |
+
+**CRITICAL: o3 Temperature Constraint**
+
+o3/o4-mini 모델은 Temperature를 조정할 수 없습니다:
+- temperature: 1.0 (고정)
+- top_p: 1.0 (고정)
+
+**대체 제어**: `--reasoning` 플래그 사용 (low/medium/high)
+
+#### o3 Reasoning Effort by Mode
+
+| Mode | reasoning_effort | 설명 |
+|------|------------------|------|
+| review | medium | 균형 잡힌 분석 |
+| design | high | 심층 아키텍처 추론 |
+| debug | high | 근본 원인 분석 |
+| idea | medium | 창의적 탐색 |
+| general | low | 빠른 응답 |
+
+### Step 0.5: Generate Session ID & Create State Directory
+
+```bash
+SESSION_ID="synod-$(date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)"
+SYNOD_BASE="${SYNOD_SESSION_DIR:-${HOME}/.synod/sessions}"
+SESSION_DIR="${SYNOD_BASE}/${SESSION_ID}"
+mkdir -p "${SESSION_DIR}/round-1-solver"
+mkdir -p "${SESSION_DIR}/round-2-critic"
+mkdir -p "${SESSION_DIR}/round-3-defense"
+```
+
+### Step 0.6: Initialize Session State
+
+Write `${SESSION_DIR}/meta.json`:
+```json
+{
+  "session_id": "{SESSION_ID}",
+  "created_at": "{ISO_TIMESTAMP}",
+  "mode": "{MODE}",
+  "problem_type": "{coding|math|creative|general}",
+  "complexity": "{simple|medium|complex}",
+  "problem_summary": "{First 200 chars of PROBLEM}",
+  "model_config": {
+    "gemini": {"model": "{flash|pro}", "thinking": "{medium|high}"},
+    "openai": {"model": "{o3|gpt4o}", "reasoning": "{medium|high|null}"}
+  },
+  "total_rounds": {3|4}
+}
+```
+
+Write initial `${SESSION_DIR}/status.json`:
+```json
+{
+  "current_round": 0,
+  "round_status": {"0": "in_progress", "1": "pending", "2": "pending", "3": "pending", "4": "pending"},
+  "last_updated": "{ISO_TIMESTAMP}",
+  "can_resume": true,
+  "resume_point": "phase-0-classification"
+}
+```
+
+**Announce to user:**
+```
+[Synod v3.0] 세션: {SESSION_ID}
+모드: {MODE} | 유형: {problem_type} | 복잡도: {complexity}
+모델: Gemini {model} ({thinking}) + OpenAI {model} ({reasoning})
+라운드: {total_rounds}
+```
+
+Update status.json: `"round_status": {"0": "complete", ...}`
+
+---
+
+## PHASE 1: Solver Round (Parallel Execution)
+
+**Objective:** Gather independent solutions from all three models.
+
+### Step 1.1: Prepare Prompt Files
+
+Create temp directory for this round:
+```bash
+TEMP_DIR="/tmp/synod-${SESSION_ID}"
+mkdir -p "$TEMP_DIR"
+```
+
+#### Gemini Prompt (Architect Persona)
+
+Write to `${TEMP_DIR}/gemini-prompt.txt`:
+
+```
+You are the ARCHITECT in a multi-agent deliberation council (Synod).
+
+## Your Role
+- Focus on structure, patterns, and systematic approaches
+- Identify architectural implications and design trade-offs
+- Provide evidence-based recommendations
+
+## Problem
+{PROBLEM}
+
+## Mode Context
+This is a {MODE} request. Focus on {MODE-SPECIFIC-FOCUS}.
+
+## REQUIRED Output Format
+
+Provide your analysis, then END with these EXACT XML blocks:
+
+<confidence score="[0-100]">
+  <evidence>[What specific facts, code, or documentation support your solution?]</evidence>
+  <logic>[How sound is your reasoning chain? Any assumptions?]</logic>
+  <expertise>[Your confidence in this domain - what do you know well vs. uncertain about?]</expertise>
+  <can_exit>[true ONLY if score >= 90 AND solution is complete AND no ambiguity remains]</can_exit>
+</confidence>
+
+<semantic_focus>
+1. [Your PRIMARY point for debate - most important claim]
+2. [Your SECONDARY point - supporting argument]
+3. [Your TERTIARY point - additional consideration]
+</semantic_focus>
+
+CRITICAL: You MUST include both XML blocks. Failure to include them will require re-prompting.
+```
+
+#### OpenAI Prompt (Explorer Persona)
+
+Write to `${TEMP_DIR}/openai-prompt.txt`:
+
+```
+You are the EXPLORER in a multi-agent deliberation council (Synod).
+
+## Your Role
+- Challenge assumptions and explore edge cases
+- Find counter-examples and potential failures
+- Identify what others might miss
+
+## Problem
+{PROBLEM}
+
+## Mode Context
+This is a {MODE} request. Focus on {MODE-SPECIFIC-FOCUS}.
+
+## REQUIRED Output Format
+
+Provide your analysis, then END with these EXACT XML blocks:
+
+<confidence score="[0-100]">
+  <evidence>[What specific facts, code, or documentation support your solution?]</evidence>
+  <logic>[How sound is your reasoning chain? Any assumptions?]</logic>
+  <expertise>[Your confidence in this domain - what do you know well vs. uncertain about?]</expertise>
+  <can_exit>[true ONLY if score >= 90 AND solution is complete AND no ambiguity remains]</can_exit>
+</confidence>
+
+<semantic_focus>
+1. [Your PRIMARY point for debate - most important claim]
+2. [Your SECONDARY point - supporting argument]
+3. [Your TERTIARY point - additional consideration]
+</semantic_focus>
+
+CRITICAL: You MUST include both XML blocks. Failure to include them will require re-prompting.
+```
+
+#### Claude Solver (Validator Persona)
+
+As the orchestrator, you (Claude) also provide an initial solution with the VALIDATOR persona:
+- Focus on correctness and validation
+- Check for logical consistency
+- Verify claims against known facts
+
+Generate your solution with the same XML format requirements.
+
+### Step 1.2: Execute External Models in Parallel
+
+Run these commands in parallel using background execution:
+
+```bash
+# Create marker files for completion tracking
+TEMP_DIR="/tmp/synod-${SESSION_ID}"
+
+# Gemini execution with completion marker
+(
+  timeout 110 gemini-3 --model {GEMINI_MODEL} --thinking {GEMINI_THINKING} --temperature 0.7 \
+    < "${TEMP_DIR}/gemini-prompt.txt" \
+    > "${TEMP_DIR}/gemini-response.txt" 2>&1
+  echo $? > "${TEMP_DIR}/gemini-exit-code"
+) &
+GEMINI_PID=$!
+
+# OpenAI execution with completion marker
+(
+  timeout 110 openai-cli --model {OPENAI_MODEL} {--reasoning REASONING if o3} \
+    < "${TEMP_DIR}/openai-prompt.txt" \
+    > "${TEMP_DIR}/openai-response.txt" 2>&1
+  echo $? > "${TEMP_DIR}/openai-exit-code"
+) &
+OPENAI_PID=$!
+
+# Wait with outer timeout (slightly longer than inner)
+# This prevents Claude's bash from timing out before subprocesses complete
+WAIT_TIMEOUT=120
+WAIT_START=$(date +%s)
+
+while true; do
+  # Check if both processes completed
+  GEMINI_DONE=false
+  OPENAI_DONE=false
+
+  [[ -f "${TEMP_DIR}/gemini-exit-code" ]] && GEMINI_DONE=true
+  [[ -f "${TEMP_DIR}/openai-exit-code" ]] && OPENAI_DONE=true
+
+  if [[ "$GEMINI_DONE" == "true" && "$OPENAI_DONE" == "true" ]]; then
+    break
+  fi
+
+  # Check timeout
+  ELAPSED=$(($(date +%s) - WAIT_START))
+  if [[ $ELAPSED -ge $WAIT_TIMEOUT ]]; then
+    # Kill any remaining processes
+    kill $GEMINI_PID 2>/dev/null || true
+    kill $OPENAI_PID 2>/dev/null || true
+
+    # Mark incomplete processes
+    [[ "$GEMINI_DONE" != "true" ]] && echo "timeout" > "${TEMP_DIR}/gemini-exit-code"
+    [[ "$OPENAI_DONE" != "true" ]] && echo "timeout" > "${TEMP_DIR}/openai-exit-code"
+    break
+  fi
+
+  sleep 1
+done
+
+# Validate completions
+GEMINI_STATUS=$(cat "${TEMP_DIR}/gemini-exit-code" 2>/dev/null || echo "missing")
+OPENAI_STATUS=$(cat "${TEMP_DIR}/openai-exit-code" 2>/dev/null || echo "missing")
+```
+
+**Process Status Handling:**
+- Exit code `0` = Success, proceed with response
+- Exit code `124` = Timeout from `timeout` command → Trigger fallback chain
+- Exit code `timeout` = Killed by outer timeout → Trigger fallback chain
+- Exit code `missing` = Unknown failure → Trigger fallback chain
+
+### Step 1.3: Read and Validate Responses
+
+Read response files:
+- `${TEMP_DIR}/gemini-response.txt`
+- `${TEMP_DIR}/openai-response.txt`
+
+For each response, validate SID format:
+
+```bash
+# Validate with fallback
+if command -v synod-parser &>/dev/null; then
+  synod-parser --validate "$(cat ${TEMP_DIR}/gemini-response.txt)"
+  PARSER_EXIT=$?
+else
+  echo "[Warning] synod-parser not found - using inline validation"
+  # Inline validation fallback
+  if grep -q '<confidence' "${TEMP_DIR}/gemini-response.txt" && \
+     grep -q '<semantic_focus>' "${TEMP_DIR}/gemini-response.txt"; then
+    PARSER_EXIT=0
+  else
+    PARSER_EXIT=1
+  fi
+fi
+```
+
+**Before reading responses, check process status:**
+
+```bash
+if [[ "$GEMINI_STATUS" != "0" ]]; then
+  echo "[Warning] Gemini process did not complete normally (status: $GEMINI_STATUS)"
+  # Trigger fallback chain (see Error Handling section)
+fi
+
+if [[ "$OPENAI_STATUS" != "0" ]]; then
+  echo "[Warning] OpenAI process did not complete normally (status: $OPENAI_STATUS)"
+  # Trigger fallback chain (see Error Handling section)
+fi
+```
+
+**If format validation fails (missing XML blocks):**
+
+Execute FORMAT ENFORCEMENT protocol (see Error Handling section).
+
+### Step 1.4: Parse SID Signals
+
+For valid responses, extract:
+```bash
+# Parse with fallback
+parse_response() {
+  local input_file="$1"
+  local output_file="$2"
+
+  if command -v synod-parser &>/dev/null; then
+    synod-parser "$(cat "$input_file")" > "$output_file"
+  else
+    # Minimal inline parser
+    local content
+    content=$(cat "$input_file")
+    local score
+    # POSIX-compliant extraction (macOS compatible)
+    score=$(echo "$content" | sed -n 's/.*score="\([0-9]*\)".*/\1/p' | head -1)
+    score=${score:-50}
+    local can_exit
+    can_exit=$(echo "$content" | sed -n 's/.*<can_exit>\([^<]*\)<.*/\1/p' | head -1)
+    can_exit=${can_exit:-false}
+
+    cat > "$output_file" << FALLBACK_JSON
+{
+  "confidence": {"score": ${score:-50}, "can_exit": ${can_exit:-false}},
+  "semantic_focus": [],
+  "fallback_mode": true
+}
+FALLBACK_JSON
+  fi
+}
+
+parse_response "${TEMP_DIR}/gemini-response.txt" "${SESSION_DIR}/round-1-solver/gemini-parsed.json"
+parse_response "${TEMP_DIR}/openai-response.txt" "${SESSION_DIR}/round-1-solver/openai-parsed.json"
+```
+
+### Step 1.5: Save Round State
+
+Save to `${SESSION_DIR}/round-1-solver/`:
+- `claude-response.md` - Your Validator solution
+- `gemini-response.md` - Gemini Architect solution
+- `openai-response.md` - OpenAI Explorer solution
+- `parsed-signals.json` - Combined SID signals from all three
+
+Update status.json:
+```json
+{
+  "current_round": 1,
+  "round_status": {"0": "complete", "1": "complete", "2": "in_progress", ...},
+  "resume_point": "phase-2-critic"
+}
+```
+
+### Step 1.6: Check Early Exit Condition
+
+If ALL models have `can_exit: true` AND confidence scores are all >= 90:
+- Skip to PHASE 4: Synthesis
+- Note: "조기 합의에 도달했습니다 - 토론 라운드를 건너뜁니다"
+
+---
+
+## PHASE 2: Critic Round (Cross-Validation)
+
+**Objective:** Validate claims, calculate Trust Scores, identify contentions.
+
+### Step 2.1: Claude Aggregation
+
+As the orchestrator, analyze all three Solver responses:
+
+1. **Identify Agreement Points** - Claims supported by 2+ models
+2. **Identify Contentions** - Conflicting claims or approaches
+3. **Spot Weaknesses** - Unsupported claims, logical gaps, missing considerations
+
+Create a compressed summary (HISTORY_CONTEXT) for external models:
+```
+## Prior Round
+
+| Agent | Conf | Key Claim |
+|-------|------|-----------|
+| Claude | {X} | {핵심 주장 1문장, 30단어 이하} |
+| Gemini | {Y} | {핵심 주장 1문장, 30단어 이하} |
+| OpenAI | {Z} | {핵심 주장 1문장, 30단어 이하} |
+
+**Contentions**: {1-2문장으로 핵심 쟁점만, 최대 2개}
+```
+
+### Step 2.1b: Low Confidence Soft Defer Check
+
+Round 1에서 추출한 confidence 점수를 분석:
+
+```bash
+CLAUDE_CONF=$(jq -r '.confidence.score // 50' "${SESSION_DIR}/round-1-solver/claude-parsed.json")
+GEMINI_CONF=$(jq -r '.confidence.score // 50' "${SESSION_DIR}/round-1-solver/gemini-parsed.json")
+OPENAI_CONF=$(jq -r '.confidence.score // 50' "${SESSION_DIR}/round-1-solver/openai-parsed.json")
+
+# Low confidence threshold
+LOW_CONF_THRESHOLD=50
+
+# Generate soft defer hints
+SOFT_DEFER_HINT=""
+if [[ $GEMINI_CONF -lt $LOW_CONF_THRESHOLD ]] || [[ $OPENAI_CONF -lt $LOW_CONF_THRESHOLD ]]; then
+  SOFT_DEFER_HINT="
+## IMPORTANT: Preserve Unique Perspectives
+Some agents expressed low confidence (score < 50) in the previous round.
+This often indicates genuine uncertainty or novel insights.
+Do NOT rush to consensus - maintain your unique analytical perspective.
+If you disagree with other agents, articulate WHY with evidence.
+"
+fi
+```
+
+**Claude Confidence 제외 근거**:
+- Claude는 orchestrator 역할로서 전체 세션을 조율함
+- Claude의 low confidence는 조기 종료 조건(can_exit)에서만 사용됨
+- Soft defer 힌트는 외부 모델(Gemini/OpenAI)이 합의를 서두르지 않도록 하는 목적
+- Claude 자신은 프롬프트를 받는 대상이 아니므로 힌트 삽입 대상이 아님
+
+### Step 2.2: Gemini Critic Execution
+
+Write to `${TEMP_DIR}/gemini-critic-prompt.txt`:
+
+```
+You are a CRITIC in a multi-agent deliberation council (Synod).
+
+{SOFT_DEFER_HINT}
+
+## Your Task
+Validate claims from the Solver round. Focus on:
+- Are claims backed by evidence?
+- Are there logical errors?
+- What's missing?
+
+## Prior Round Context
+{HISTORY_CONTEXT}
+
+## Original Problem
+{PROBLEM}
+
+## REQUIRED Output Format
+
+<critique>
+### Validated Claims (with evidence)
+{list claims that are well-supported}
+
+### Disputed Claims (with reasons)
+{list claims that lack evidence or have issues}
+
+### Missing Considerations
+{what did solvers overlook?}
+</critique>
+
+<confidence score="[0-100]">
+  <evidence>[Evidence quality of your critique]</evidence>
+  <logic>[Soundness of your analysis]</logic>
+  <expertise>[Your domain confidence]</expertise>
+  <can_exit>[true if debate should end]</can_exit>
+</confidence>
+
+<semantic_focus>
+1. [Most important critique point]
+2. [Secondary critique]
+3. [Tertiary critique]
+</semantic_focus>
+```
+
+Execute:
+```bash
+# Gemini Critic execution (lower temperature for analytical evaluation)
+timeout 120 gemini-3 --model {GEMINI_MODEL} --thinking {GEMINI_THINKING} --temperature 0.5 < "${TEMP_DIR}/gemini-critic-prompt.txt" > "${TEMP_DIR}/gemini-critique.txt" 2>&1 &
+```
+
+### Step 2.3: OpenAI Critic Execution
+
+Write to `${TEMP_DIR}/openai-critic-prompt.txt`:
+
+```
+You are a LOGIC CHECKER in a multi-agent deliberation council (Synod).
+
+{SOFT_DEFER_HINT}
+
+## Your Task
+Find counter-examples and logical flaws. Focus on:
+- Edge cases that break proposed solutions
+- Assumptions that might be wrong
+- Alternative interpretations
+
+## Prior Round Context
+{HISTORY_CONTEXT}
+
+## Original Problem
+{PROBLEM}
+
+## REQUIRED Output Format
+
+<critique>
+### Counter-Examples Found
+{specific cases that challenge solutions}
+
+### Logical Flaws Detected
+{invalid reasoning, false premises}
+
+### Alternative Interpretations
+{different ways to view the problem}
+</critique>
+
+<confidence score="[0-100]">
+  <evidence>[Evidence for your counter-examples]</evidence>
+  <logic>[Soundness of your logical analysis]</logic>
+  <expertise>[Your domain confidence]</expertise>
+  <can_exit>[true if no major issues found]</can_exit>
+</confidence>
+
+<semantic_focus>
+1. [Most critical counter-example or flaw]
+2. [Secondary issue]
+3. [Tertiary issue]
+</semantic_focus>
+```
+
+### Step 2.4: Calculate Trust Scores
+
+For each model's Solver response, calculate Trust Score using this rubric:
+
+#### C (Credibility) - Evidence Quality
+| Score | Criteria |
+|-------|----------|
+| 0.9-1.0 | Cites specific code, docs, or proven patterns; claims are verifiable |
+| 0.7-0.8 | References general knowledge; claims are reasonable but not cited |
+| 0.5-0.6 | Makes claims without evidence; relies on "usually" or "typically" |
+| 0.3-0.4 | Vague claims; contradicts known facts |
+| 0.0-0.2 | Fabricates evidence; demonstrably false statements |
+
+#### R (Reliability) - Logical Consistency
+| Score | Criteria |
+|-------|----------|
+| 0.9-1.0 | Arguments follow logically; no contradictions; conclusions match premises |
+| 0.7-0.8 | Minor logical gaps; mostly coherent reasoning |
+| 0.5-0.6 | Some non-sequiturs; conclusions partially supported |
+| 0.3-0.4 | Major logical flaws; contradicts own statements |
+| 0.0-0.2 | Incoherent reasoning; contradictory conclusions |
+
+#### I (Intimacy) - Relevance to Problem
+| Score | Criteria |
+|-------|----------|
+| 0.9-1.0 | Directly addresses the exact problem; solution is immediately applicable |
+| 0.7-0.8 | Addresses problem with minor tangents; mostly relevant |
+| 0.5-0.6 | Partially relevant; includes significant off-topic content |
+| 0.3-0.4 | Mostly off-topic; addresses different problem |
+| 0.0-0.2 | Completely irrelevant response |
+
+#### S (Self-Orientation) - Bias/Agenda Detection
+| Score | Criteria |
+|-------|----------|
+| 0.1-0.2 | Neutral, balanced perspective; acknowledges limitations and alternatives |
+| 0.3-0.4 | Slight preference for own approach but considers others |
+| 0.5-0.6 | Noticeable bias; dismisses alternatives without justification |
+| 0.7-0.8 | Strong bias; ignores contradicting evidence |
+| 0.9-1.0 | Completely one-sided; refuses to consider alternatives |
+
+**Trust Calculation:** `T = min((C x R x I) / S, 2.0)`
+
+The formula is capped at 2.0 to prevent unbounded scores when Self-Orientation (S) is very low:
+- S = 0.1 (most neutral) with perfect C/R/I → T = min(10.0, 2.0) = 2.0
+- S = 0.5 (moderate bias) with perfect C/R/I → T = min(2.0, 2.0) = 2.0
+- S = 1.0 (extreme bias) with perfect C/R/I → T = min(1.0, 2.0) = 1.0
+
+```bash
+synod-parser --trust {C} {R} {I} {S}  # Parser handles capping internally
+```
+
+**Thresholds:**
+- T < 0.5 = Exclude from synthesis (unless all are low - see Error Handling)
+- T >= 1.5 = High trust (consider as primary source)
+- T >= 1.0 = Good trust
+- T >= 0.5 = Acceptable trust
+
+### Step 2.5: Save Critic Round State
+
+Save to `${SESSION_DIR}/round-2-critic/`:
+- `aggregation.md` - Claude's aggregation and summary
+- `gemini-critique.md` - Gemini's critique
+- `openai-critique.md` - OpenAI's critique
+- `trust-scores.json` - All Trust Score calculations
+- `contentions.json` - List of disputed points
+
+Update status.json to round 2 complete.
+
+---
+
+## PHASE 3: Defense Round (Court Model)
+
+**Objective:** Structured debate to resolve contentions through adversarial testing.
+
+### Step 3.1: Assign Court Roles
+
+- **Judge (Claude)**: Neutral arbiter, makes final rulings
+- **Defense Lawyer (Gemini)**: Defends the strongest solution from Solver round
+- **Prosecutor (OpenAI)**: Attacks weak points and proposes alternatives
+
+### Step 3.2: Identify Defense Target
+
+Select the solution with highest Trust Score as the "defendant."
+
+### Step 3.3: Gemini Defense Execution
+
+Write to `${TEMP_DIR}/gemini-defense-prompt.txt`:
+
+```
+You are the DEFENSE LAWYER in a judicial deliberation (Synod Court).
+
+{SOFT_DEFER_HINT}
+
+## Your Role
+Defend the proposed solution against attacks. You must:
+- Strengthen weak arguments with evidence
+- Address counter-examples raised by critics
+- Explain why alternatives are inferior
+
+## ANTI-CONFORMITY INSTRUCTION (CRITICAL)
+Do NOT simply agree with the prosecutor to reach consensus.
+Your job is ADVERSARIAL - defend your position vigorously.
+Only concede points that are GENUINELY indefensible.
+
+## Solution Under Defense
+{BEST_SOLUTION_SUMMARY}
+
+## Criticisms to Address
+{CONTENTIONS_FROM_CRITIC_ROUND}
+
+## Original Problem
+{PROBLEM}
+
+## REQUIRED Output Format
+
+<defense>
+### Rebuttal to Criticisms
+{address each criticism with counter-arguments}
+
+### Strengthened Evidence
+{additional evidence supporting the solution}
+
+### Why Alternatives Fail
+{specific reasons other approaches are inferior}
+</defense>
+
+<confidence score="[0-100]">
+  <evidence>[Strength of your defense evidence]</evidence>
+  <logic>[Soundness of your rebuttals]</logic>
+  <expertise>[Your confidence in the defense]</expertise>
+  <can_exit>[true if defense is unassailable]</can_exit>
+</confidence>
+
+<semantic_focus>
+1. [Strongest defense point]
+2. [Key rebuttal]
+3. [Critical evidence]
+</semantic_focus>
+```
+
+### Step 3.4: OpenAI Prosecution Execution
+
+Write to `${TEMP_DIR}/openai-prosecution-prompt.txt`:
+
+```
+You are the PROSECUTOR in a judicial deliberation (Synod Court).
+
+{SOFT_DEFER_HINT}
+
+## Your Role
+Attack the proposed solution and advocate for better alternatives. You must:
+- Find fatal flaws in the defended solution
+- Present evidence for why it will fail
+- Propose superior alternatives with justification
+
+## ANTI-CONFORMITY INSTRUCTION (CRITICAL)
+Do NOT simply agree with the defense to reach consensus.
+Your job is ADVERSARIAL - attack vigorously and propose alternatives.
+Only concede if the defense is GENUINELY bulletproof.
+
+## Solution Under Attack
+{BEST_SOLUTION_SUMMARY}
+
+## Your Prior Criticisms
+{YOUR_CRITIC_ROUND_OUTPUT}
+
+## Original Problem
+{PROBLEM}
+
+## REQUIRED Output Format
+
+<prosecution>
+### Fatal Flaws
+{critical issues that make the solution unacceptable}
+
+### Evidence of Failure
+{specific scenarios where solution fails}
+
+### Superior Alternative
+{your proposed better solution with justification}
+</prosecution>
+
+<confidence score="[0-100]">
+  <evidence>[Strength of your attack evidence]</evidence>
+  <logic>[Soundness of your prosecution]</logic>
+  <expertise>[Your confidence in alternative]</expertise>
+  <can_exit>[true if case is clear-cut]</can_exit>
+</confidence>
+
+<semantic_focus>
+1. [Most damaging attack point]
+2. [Critical failure scenario]
+3. [Best alternative argument]
+</semantic_focus>
+```
+
+### Step 3.5: Claude Judge Deliberation
+
+As the Judge, review both arguments and:
+
+1. **Evaluate Defense Strength** - Did they address all criticisms? Is evidence compelling?
+2. **Evaluate Prosecution Strength** - Are the attacks valid? Is the alternative viable?
+3. **Make Preliminary Ruling** - Which side has the stronger case?
+
+### Step 3.6: Save Defense Round State
+
+Save to `${SESSION_DIR}/round-3-defense/`:
+- `judge-deliberation.md` - Your analysis as Judge
+- `defense-args.md` - Gemini's defense
+- `prosecution-args.md` - OpenAI's prosecution
+- `preliminary-ruling.md` - Initial judgment
+
+Update status.json to round 3 complete.
+
+---
+
+## PHASE 4: Synthesis
+
+**Objective:** Produce final, actionable output with confidence-weighted conclusions.
+
+### Step 4.1: Compile Final Evidence
+
+Gather from all rounds:
+- Validated claims (from Critic round)
+- Trust Scores (filter T < 0.5 unless all low)
+- Defense/Prosecution strongest arguments
+- Judge's preliminary ruling
+
+### Step 4.2: Calculate Final Confidence
+
+Weighted average based on Trust Scores:
+```
+FINAL_CONFIDENCE = (T_claude * C_claude + T_gemini * C_gemini + T_openai * C_openai) / (T_claude + T_gemini + T_openai)
+```
+
+Where T = Trust Score, C = Confidence Score
+
+### Step 4.3: Generate Mode-Specific Output
+
+#### Mode: review
+```markdown
+## 코드 리뷰 결과
+
+### 발견된 문제
+- **[ERROR]** {critical issue} - {explanation}
+- **[WARNING]** {moderate issue} - {explanation}
+- **[INFO]** {suggestion} - {explanation}
+
+### 권장 사항
+{prioritized list of fixes}
+
+### 신뢰도: {FINAL_CONFIDENCE}%
+{brief note on agreement/disagreement between models}
+```
+
+#### Mode: design
+```markdown
+## 아키텍처 결정
+
+### 권장 접근법
+{description of chosen architecture}
+
+### 트레이드오프
+| Aspect | Chosen Approach | Alternative | Rationale |
+|--------|-----------------|-------------|-----------|
+| ... | ... | ... | ... |
+
+### 구현 단계
+1. {step}
+2. {step}
+...
+
+### 신뢰도: {FINAL_CONFIDENCE}%
+{note on design certainty}
+```
+
+#### Mode: debug
+```markdown
+## 디버그 분석
+
+### 근본 원인
+{identified cause with evidence}
+
+### 증거 체인
+1. {symptom} -> {cause}
+2. {trace} -> {conclusion}
+
+### 권장 수정
+{code or steps to fix}
+
+### 예방책
+{how to avoid in future}
+
+### 신뢰도: {FINAL_CONFIDENCE}%
+```
+
+#### Mode: idea
+```markdown
+## 아이디어 평가
+
+### 순위별 아이디어
+
+#### 1. {Top Idea}
+**장점:** {list}
+**단점:** {list}
+**실현 가능성:** {high/medium/low}
+
+#### 2. {Second Idea}
+...
+
+### 권장 사항
+{which idea to pursue and why}
+
+### 신뢰도: {FINAL_CONFIDENCE}%
+```
+
+#### Mode: general
+```markdown
+## 답변
+
+{comprehensive response}
+
+### 핵심 포인트
+- {point 1}
+- {point 2}
+- {point 3}
+
+### 고려 사항
+{nuances, edge cases, caveats}
+
+### 신뢰도: {FINAL_CONFIDENCE}%
+```
+
+### Step 4.4: Include Decision Rationale
+
+Add a collapsible section showing deliberation process:
+
+```markdown
+<details>
+<summary>숙의 과정</summary>
+
+### 모델 기여
+- **Claude (Validator):** {key contribution}
+- **Gemini (Architect):** {key contribution}
+- **OpenAI (Explorer):** {key contribution}
+
+### 해결된 주요 쟁점
+1. {contention} -> {resolution}
+2. {contention} -> {resolution}
+
+### 신뢰 점수
+- Claude: {score} ({rating})
+- Gemini: {score} ({rating})
+- OpenAI: {score} ({rating})
+
+</details>
+```
+
+### Step 4.5: Save Final State
+
+Save `${SESSION_DIR}/round-4-synthesis.md` with full output.
+
+Update status.json:
+```json
+{
+  "current_round": 4,
+  "round_status": {"0": "complete", "1": "complete", "2": "complete", "3": "complete", "4": "complete"},
+  "status": "complete",
+  "final_confidence": {FINAL_CONFIDENCE},
+  "completed_at": "{ISO_TIMESTAMP}"
+}
+```
+
+---
+
+## Error Handling & Fallbacks
+
+### Timeout Fallback Chain
+
+**If Gemini times out (120s):**
+1. Retry: `gemini-3 --model flash --thinking medium` (downgrade)
+2. Retry: `gemini-3 --model flash --thinking low`
+3. Final: Continue without Gemini, note in synthesis: "[Gemini 사용 불가 - 시간 초과]"
+
+**If OpenAI times out (120s):**
+1. Retry: `openai-cli --model o3 --reasoning medium` (downgrade)
+2. Retry: `openai-cli --model gpt4o`
+3. Final: Continue without OpenAI, note in synthesis: "[OpenAI 사용 불가 - 시간 초과]"
+
+### Format Enforcement Protocol
+
+**If model response lacks required XML blocks:**
+
+Send re-prompt:
+```
+Your previous response was missing the required XML format. Please add the following blocks AT THE END of your response:
+
+<confidence score="[0-100]">
+  <evidence>[What facts support your solution?]</evidence>
+  <logic>[How sound is your reasoning?]</logic>
+  <expertise>[Your domain confidence]</expertise>
+  <can_exit>[true if confidence >= 90 and solution is complete]</can_exit>
+</confidence>
+
+<semantic_focus>
+1. [Primary debate point]
+2. [Secondary debate point]
+3. [Tertiary debate point]
+</semantic_focus>
+
+Your original answer (keep this, just add XML at end):
+---
+{ORIGINAL_RESPONSE}
+---
+```
+
+**Max retries:** 2 per model per round
+
+**If still malformed after retries:**
+```bash
+# Apply defaults via parser
+synod-parser "$(cat response.txt)"  # Returns defaults with format_warning
+```
+
+Default values:
+- `confidence score="50"`
+- `can_exit="false"`
+- `semantic_focus` = extracted key sentences
+
+### Low Trust Score Fallback
+
+**If ALL models have Trust Score < 0.5:**
+1. Do NOT exclude all agents
+2. Keep the agent with highest Trust Score
+3. Add warning to synthesis: "[낮은 신뢰도 상황: 모든 모델이 임계값 이하의 점수를 받았습니다. 결과를 주의 깊게 검토해야 합니다.]"
+4. Set `final_confidence` cap at 60%
+
+### API Error Handling
+
+**If CLI returns error (non-zero exit):**
+1. Check stderr for rate limit message → wait 30s, retry
+2. Check for auth error → report to user, cannot continue
+3. Other error → use fallback chain
+
+---
+
+## Resume Protocol
+
+**Trigger:** `$1 == "resume"` OR `$ARGUMENTS` contains `--continue`
+
+### Step R.1: Find Latest Session
+
+```bash
+SYNOD_BASE="${SYNOD_SESSION_DIR:-${HOME}/.synod/sessions}"
+LATEST=$(ls -td ${SYNOD_BASE}/synod-* 2>/dev/null | head -1)
+```
+
+If no session found: "재개할 활성 Synod 세션이 없습니다."
+
+### Step R.2: Read Session State
+
+Read `${LATEST}/status.json` to determine:
+- `current_round` - Last completed round
+- `resume_point` - Specific checkpoint
+- `can_resume` - Whether session is resumable
+
+If `status == "complete"`: "세션이 이미 완료되었습니다. 새 세션을 시작하세요."
+If `status == "cancelled"`: "세션이 취소되었습니다. 새 세션을 시작하세요."
+
+### Step R.3: Load Context
+
+Read all completed round files to rebuild context:
+- Round 0: `meta.json` for configuration
+- Round 1: `round-1-solver/*.md` for initial solutions
+- Round 2: `round-2-critic/*.md` for critiques and Trust Scores
+- Round 3: `round-3-defense/*.md` for court arguments
+
+### Step R.4: Continue Execution
+
+Jump to the appropriate phase based on `current_round`:
+- Round 0 incomplete → PHASE 0
+- Round 1 incomplete → PHASE 1 (may have partial responses)
+- Round 2 incomplete → PHASE 2
+- Round 3 incomplete → PHASE 3
+- Round 4 incomplete → PHASE 4
+
+Announce: `[Synod] {SESSION_ID} 세션을 단계 {N}부터 재개합니다`
+
+---
+
+## Mode-Specific Focus Areas
+
+### review Mode
+- **Claude focus:** Correctness, best practices, maintainability
+- **Gemini focus:** Architectural patterns, code organization
+- **OpenAI focus:** Edge cases, error handling, security
+- **Output emphasis:** Actionable issues with severity levels
+
+### design Mode
+- **Claude focus:** System integration, API design
+- **Gemini focus:** Scalability, patterns, trade-offs
+- **OpenAI focus:** Failure modes, alternatives, constraints
+- **Output emphasis:** Decision rationale with trade-off analysis
+
+### debug Mode
+- **Claude focus:** Symptom analysis, hypothesis validation
+- **Gemini focus:** System-level causes, pattern recognition
+- **OpenAI focus:** Counter-hypotheses, edge cases
+- **Output emphasis:** Root cause chain with fix and prevention
+
+### idea Mode
+- **Claude focus:** Feasibility, implementation effort
+- **Gemini focus:** Creative exploration, novel approaches
+- **OpenAI focus:** Risk assessment, market fit
+- **Output emphasis:** Ranked ideas with pros/cons
+
+### general Mode
+- **Claude focus:** Accuracy, completeness
+- **Gemini focus:** Broad coverage, connections
+- **OpenAI focus:** Alternative perspectives, nuances
+- **Output emphasis:** Balanced, comprehensive answer
+
+---
+
+## Execution Flow Summary
+
+```
+1. PARSE arguments → determine MODE and PROBLEM
+2. CLASSIFY problem type and complexity
+3. SELECT model configurations
+4. CREATE session directory and state
+5. EXECUTE Solver round (Claude + Gemini + OpenAI in parallel)
+6. VALIDATE responses, enforce format if needed
+7. AGGREGATE and calculate Trust Scores
+8. EXECUTE Critic round (cross-validation)
+9. EXECUTE Defense round (court-style debate)
+10. SYNTHESIZE final output with confidence weighting
+11. SAVE final state and present results
+```
+
+**On any error:** Activate fallback chain, preserve state, continue if possible.
+
+**On user interrupt:** State is preserved for resume.
+
+---
+
+## Session Cleanup
+
+Sessions are preserved in `${SYNOD_BASE}` for:
+- Debugging and auditing
+- Resume capability
+- Learning from past deliberations
+
+To clean old sessions:
+```bash
+# Remove sessions older than 7 days
+SYNOD_BASE="${SYNOD_SESSION_DIR:-${HOME}/.synod/sessions}"
+find ${SYNOD_BASE} -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
+```
+
+---
+
+## Prerequisites: CLI Tool Temperature Support
+
+### Gemini CLI (`gemini-3`)
+Temperature 플래그 지원:
+```bash
+gemini-3 --model flash --thinking high --temperature 0.7 < prompt.txt
+```
+
+### OpenAI CLI (`openai-cli`)
+- **gpt4o**: Temperature 플래그 지원
+  ```bash
+  openai-cli --model gpt4o --temperature 0.7 < prompt.txt
+  ```
+- **o3**: Temperature 조정 불가 (고정 1.0)
+  ```bash
+  openai-cli --model o3 --reasoning high < prompt.txt
+  # NOTE: --temperature flag is NOT supported for o3
+  ```
+
+---
+
+## Quick Reference
+
+| 명령 | 동작 |
+|---------|--------|
+| `/synod review: <code>` | 심각도별 코드 리뷰 |
+| `/synod design: <spec>` | 아키텍처 숙의 |
+| `/synod debug: <error>` | 근본 원인 분석 |
+| `/synod idea: <topic>` | 순위 매김 브레인스토밍 |
+| `/synod <question>` | 일반적인 균형 잡힌 답변 |
+| `/synod resume` | 중단된 세션 계속 |
+| `/cancel-synod` | 현재 세션 중단 (상태 보존) |
