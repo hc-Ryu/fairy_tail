@@ -2,9 +2,12 @@
   "name": "synod",
   "version": "3.0.0",
   "description": "Multi-agent deliberation system with Claude, Gemini, and OpenAI - structured debate for better decisions",
-  "author": "quantsquirrel",
-  "license": "MIT",
+  "author": {
+    "name": "quantsquirrel"
+  },
+  "repository": "https://github.com/quantsquirrel/synod",
   "homepage": "https://github.com/quantsquirrel/synod",
+  "license": "MIT",
   "keywords": [
     "claude-code",
     "multi-agent",
@@ -14,43 +17,5 @@
     "openai",
     "llm-orchestration"
   ],
-  "skills": [
-    "synod",
-    "cancel-synod"
-  ],
-  "tools": [
-    "synod-parser.py",
-    "gemini-3.py",
-    "openai-cli.py"
-  ],
-  "dependencies": {
-    "python": ">=3.9",
-    "packages": [
-      "google-genai>=1.0.0",
-      "openai>=1.0.0",
-      "httpx>=0.24.0"
-    ],
-    "system": [
-      "jq",
-      "openssl"
-    ]
-  },
-  "config": {
-    "GEMINI_API_KEY": {
-      "required": true,
-      "description": "Google AI Studio API key"
-    },
-    "OPENAI_API_KEY": {
-      "required": true,
-      "description": "OpenAI API key"
-    },
-    "SYNOD_SESSION_DIR": {
-      "required": false,
-      "default": "~/.synod/sessions",
-      "description": "Directory for session storage"
-    }
-  },
-  "claude_code": {
-    "min_version": "1.0.0"
-  }
+  "skills": "./skills/"
 }
