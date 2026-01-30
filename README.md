@@ -88,20 +88,93 @@ export SYNOD_SESSION_DIR="~/.synod/sessions"  # Default session storage director
 
 ## Theoretical Foundation
 
-Synod is built on state-of-the-art multi-agent debate research:
+Synod is built on state-of-the-art multi-agent debate research, combining insights from recent publications in AI reasoning and deliberation systems.
+
+### Why Multi-Agent Debate?
+
+Single LLMs often suffer from:
+- **Confirmation bias**: Reinforcing initial assumptions
+- **Hallucination**: Generating plausible but incorrect information
+- **Overconfidence**: High certainty on wrong answers
+
+Multi-agent debate addresses these by forcing models to:
+1. Defend positions against adversarial critique
+2. Provide evidence for claims
+3. Acknowledge uncertainty through structured confidence scoring
+
+Research shows that 3-round debates capture most quality improvements (>95%), with diminishing returns thereafter ([ReConcile, 2024](https://arxiv.org/abs/2309.13007)).
 
 ### Core Methodologies
 
-- **SID (Self-Signals Driven)**: Agents report confidence with semantic focus (primary, secondary, tertiary claims)
-- **CortexDebate**: Trust Score formula = min((C×R×I)/S, 2.0) where:
-  - C = Confidence (0-100)
-  - R = Reasoning quality (0-1)
-  - I = Informativeness (0-1)
-  - S = System complexity (0-1)
+#### 1. ReConcile - Round-based Convergence
+**Paper**: [ReConcile: Round-Table Conference Improves Reasoning via Consensus (ACL 2024)](https://arxiv.org/abs/2309.13007)
 
-- **Free-MAD (Majority Aversion Debate)**: Anti-conformity instructions force independent analysis
-- **ReConcile**: 3-round convergence pattern (Solver → Critic → Defense)
-- **ConfMAD**: Soft defer mechanism for low-confidence arguments
+Synod implements the 3-round convergence pattern:
+- **Round 1 (Solver)**: Independent solutions from each agent
+- **Round 2 (Critic)**: Cross-validation and weakness identification
+- **Round 3 (Defense)**: Adversarial refinement of best solution
+
+#### 2. AgentsCourt - Judicial Debate Structure
+**Paper**: [AgentsCourt: Simulating Court with Adversarial Evolvable Lawyer Agents (2024)](https://arxiv.org/abs/2408.08089)
+
+The Defense round uses courtroom roles:
+- **Judge (Claude)**: Neutral arbiter making final decisions
+- **Defense Lawyer (Gemini)**: Advocates for the leading solution
+- **Prosecutor (OpenAI)**: Challenges weaknesses and proposes alternatives
+
+#### 3. ConfMAD - Confidence-based Soft Defer
+**Paper**: [ConfMAD: Confidence-aware Multi-Agent Debate (2025)](https://arxiv.org/abs/2502.06233)
+
+Low-confidence agents defer to higher-confidence peers:
+- Agents with confidence < 50 receive "soft defer hints"
+- Prevents premature consensus from uncertain agents
+- Preserves unique perspectives that might otherwise be lost
+
+#### 4. Free-MAD - Anti-Conformity Protocol
+**Concept**: Majority Aversion Debate
+
+Explicit instructions prevent groupthink:
+```
+ANTI-CONFORMITY INSTRUCTION (CRITICAL)
+Do NOT simply agree with others to reach consensus.
+Your job is ADVERSARIAL - defend your position vigorously.
+Only concede points that are GENUINELY indefensible.
+```
+
+#### 5. SID - Self-Signals Driven Confidence
+**Concept**: Structured Self-Assessment
+
+Each agent reports confidence with semantic breakdown:
+- **Evidence**: What facts support the claim?
+- **Logic**: How sound is the reasoning chain?
+- **Expertise**: Domain confidence level
+- **Semantic Focus**: Primary, secondary, tertiary claims
+
+#### 6. CortexDebate - Trust Score Calculation
+**Formula**: `T = min((C × R × I) / S, 2.0)`
+
+| Factor | Description | Range |
+|--------|-------------|-------|
+| C (Credibility) | Evidence quality and verifiability | 0-1 |
+| R (Reliability) | Logical consistency | 0-1 |
+| I (Intimacy) | Relevance to the problem | 0-1 |
+| S (Self-Orientation) | Bias detection (lower is better) | 0.1-1 |
+
+**Thresholds**:
+- T ≥ 1.5: High trust (primary source)
+- T ≥ 1.0: Good trust
+- T ≥ 0.5: Acceptable trust
+- T < 0.5: Exclude from synthesis
+
+### Research References
+
+| Paper | Year | Key Contribution |
+|-------|------|------------------|
+| [ReConcile](https://arxiv.org/abs/2309.13007) | ACL 2024 | 3-round convergence pattern |
+| [AgentsCourt](https://arxiv.org/abs/2408.08089) | 2024 | Courtroom-style adversarial debate |
+| [A-HMAD](https://link.springer.com/article/10.1007/s44443-025-00353-3) | AI & Ethics 2025 | Human-like multi-agent deliberation |
+| [ConfMAD](https://arxiv.org/abs/2502.06233) | 2025 | Confidence-aware soft defer |
+| [Debate Improves Reasoning](https://arxiv.org/abs/2305.14325) | 2023 | Foundation of multi-agent debate |
 
 ## Output Format
 
