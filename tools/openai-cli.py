@@ -30,11 +30,8 @@ except ImportError:
     sys.stderr.write("설치: pip install openai\n")
     sys.exit(1)
 
-# API 키 확인
+# API 키 (main()에서 검증)
 api_key = os.environ.get("OPENAI_API_KEY")
-if not api_key:
-    sys.stderr.write("Error: OPENAI_API_KEY 환경 변수가 설정되지 않았습니다.\n")
-    sys.exit(1)
 
 # 모델 매핑 (2026년 1월 기준)
 MODEL_MAP = {
@@ -207,6 +204,11 @@ Reasoning Levels (o-series only):
 
     if not prompt:
         sys.stderr.write("Error: 프롬프트가 비어있습니다.\n")
+        sys.exit(1)
+
+    # API 키 검증 (이 시점에서만 필요)
+    if not api_key:
+        sys.stderr.write("Error: OPENAI_API_KEY 환경 변수가 설정되지 않았습니다.\n")
         sys.exit(1)
 
     if args.verbose:
