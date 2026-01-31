@@ -1,40 +1,25 @@
 <div align="center">
 
-<!-- Dramatic Title Card -->
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,14,25,27&height=200&section=header&text=⚖️%20SYNOD&fontSize=80&fontAlignY=35&desc=하나의%20AI로%20부족할%20때%2C%20의회를%20소집하라.&descSize=20&descAlignY=55&animation=fadeIn"/>
+<!-- Hero Banner -->
+<img src="assets/synod-banner.jpeg" alt="SYNOD - Multi-Agent Deliberation System" width="100%"/>
 
-<!-- Status Badges with Custom Styling -->
+<br/>
+
+<!-- Tagline -->
+### *하나의 AI로 부족할 때, 의회를 소집하라.*
+
+<br/>
+
+<!-- Status Badges -->
 <p>
-<a href="#-60초-설정"><img src="https://img.shields.io/badge/⚡_빠른_시작-60초-F97316?style=for-the-badge&labelColor=1a1a2e" alt="Quick Start"/></a>
-<a href="https://arxiv.org/abs/2309.13007"><img src="https://img.shields.io/badge/📚_연구_기반-5편_논문-8B5CF6?style=for-the-badge&labelColor=1a1a2e" alt="Research"/></a>
-<a href="LICENSE"><img src="https://img.shields.io/badge/📜_라이선스-MIT-22C55E?style=for-the-badge&labelColor=1a1a2e" alt="License"/></a>
+<a href="#-60초-설정"><img src="https://img.shields.io/badge/⚡_빠른_시작-60초-F97316?style=flat-square" alt="Quick Start"/></a>
+<a href="https://arxiv.org/abs/2309.13007"><img src="https://img.shields.io/badge/📚_연구_기반-5편-8B5CF6?style=flat-square" alt="Research"/></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/📜_라이선스-MIT-22C55E?style=flat-square" alt="License"/></a>
+<a href="https://github.com/quantsquirrel/claude-synod-debate"><img src="https://img.shields.io/github/stars/quantsquirrel/claude-synod-debate?style=flat-square&logo=github" alt="Stars"/></a>
 </p>
 
 <!-- Language Toggle -->
 **[English](README.md)** · **[한국어](README.ko.md)**
-
-<br/>
-
-<!-- The Trinity -->
-<table>
-<tr>
-<td align="center">
-<img src="https://img.shields.io/badge/-GEMINI-3B82F6?style=for-the-badge&logo=google&logoColor=white" alt="Gemini"/><br/>
-<sub><b>🛡️ 변호인</b></sub><br/>
-<sub><i>솔루션을 옹호</i></sub>
-</td>
-<td align="center">
-<img src="https://img.shields.io/badge/-CLAUDE-F97316?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude"/><br/>
-<sub><b>⚖️ 판사</b></sub><br/>
-<sub><i>판결을 종합</i></sub>
-</td>
-<td align="center">
-<img src="https://img.shields.io/badge/-GPT--4o-22C55E?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI"/><br/>
-<sub><b>🗡️ 검사</b></sub><br/>
-<sub><i>약점을 공격</i></sub>
-</td>
-</tr>
-</table>
 
 </div>
 
@@ -360,11 +345,6 @@ export SYNOD_RETENTION_DAYS=30
 
 <br/>
 
-> *"의논이 많으면 안전을 얻느니라."*<br/>
-> — 잠언 11:14
-
-<br/>
-
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,14,25,27&height=100&section=footer"/>
+> *"의논이 많으면 안전을 얻느니라."* — 잠언 11:14
 
 </div>

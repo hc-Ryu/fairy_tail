@@ -1,40 +1,25 @@
 <div align="center">
 
-<!-- Dramatic Title Card -->
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,14,25,27&height=200&section=header&text=⚖️%20SYNOD&fontSize=80&fontAlignY=35&desc=When%20one%20AI%20isn%27t%20enough%2C%20convene%20the%20council.&descSize=20&descAlignY=55&animation=fadeIn"/>
+<!-- Hero Banner -->
+<img src="assets/synod-banner.jpeg" alt="SYNOD - Multi-Agent Deliberation System" width="100%"/>
 
-<!-- Status Badges with Custom Styling -->
+<br/>
+
+<!-- Tagline -->
+### *When one AI isn't enough, convene the council.*
+
+<br/>
+
+<!-- Status Badges -->
 <p>
-<a href="#-60-second-setup"><img src="https://img.shields.io/badge/⚡_QUICK_START-60_seconds-F97316?style=for-the-badge&labelColor=1a1a2e" alt="Quick Start"/></a>
-<a href="https://arxiv.org/abs/2309.13007"><img src="https://img.shields.io/badge/📚_RESEARCH-5_Papers-8B5CF6?style=for-the-badge&labelColor=1a1a2e" alt="Research"/></a>
-<a href="LICENSE"><img src="https://img.shields.io/badge/📜_LICENSE-MIT-22C55E?style=for-the-badge&labelColor=1a1a2e" alt="License"/></a>
+<a href="#-60-second-setup"><img src="https://img.shields.io/badge/⚡_Quick_Start-60s-F97316?style=flat-square" alt="Quick Start"/></a>
+<a href="https://arxiv.org/abs/2309.13007"><img src="https://img.shields.io/badge/📚_Research-5_Papers-8B5CF6?style=flat-square" alt="Research"/></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/📜_License-MIT-22C55E?style=flat-square" alt="License"/></a>
+<a href="https://github.com/quantsquirrel/claude-synod-debate"><img src="https://img.shields.io/github/stars/quantsquirrel/claude-synod-debate?style=flat-square&logo=github" alt="Stars"/></a>
 </p>
 
 <!-- Language Toggle -->
 **[English](README.md)** · **[한국어](README.ko.md)**
-
-<br/>
-
-<!-- The Trinity -->
-<table>
-<tr>
-<td align="center">
-<img src="https://img.shields.io/badge/-GEMINI-3B82F6?style=for-the-badge&logo=google&logoColor=white" alt="Gemini"/><br/>
-<sub><b>🛡️ DEFENSE</b></sub><br/>
-<sub><i>Advocates solutions</i></sub>
-</td>
-<td align="center">
-<img src="https://img.shields.io/badge/-CLAUDE-F97316?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude"/><br/>
-<sub><b>⚖️ JUDGE</b></sub><br/>
-<sub><i>Synthesizes verdict</i></sub>
-</td>
-<td align="center">
-<img src="https://img.shields.io/badge/-GPT--4o-22C55E?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI"/><br/>
-<sub><b>🗡️ PROSECUTOR</b></sub><br/>
-<sub><i>Challenges weaknesses</i></sub>
-</td>
-</tr>
-</table>
 
 </div>
 
@@ -360,11 +345,6 @@ export SYNOD_RETENTION_DAYS=30
 
 <br/>
 
-> *"In the multitude of counselors there is safety."*<br/>
-> — Proverbs 11:14
-
-<br/>
-
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,14,25,27&height=100&section=footer"/>
+> *"In the multitude of counselors there is safety."* — Proverbs 11:14
 
 </div>
