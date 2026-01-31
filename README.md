@@ -86,29 +86,26 @@ Acknowledged uncertainty.
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1e3a5f', 'secondaryColor': '#4a1d1d', 'tertiaryColor': '#1a3d1a'}}}%%
-flowchart LR
+flowchart TB
     subgraph ACT1["🎬 ACT I · SOLVE"]
-        direction TB
-        G1["🔵 Gemini proposes Solution A"]
-        O1["🟢 OpenAI proposes Solution B"]
+        G1["🔵 Gemini → Solution A"]
+        O1["🟢 OpenAI → Solution B"]
     end
 
     subgraph ACT2["⚔️ ACT II · CRITIQUE"]
-        direction TB
-        G2["🔵 Gemini attacks Solution B"]
-        O2["🟢 OpenAI attacks Solution A"]
+        G2["🔵 Gemini attacks B"]
+        O2["🟢 OpenAI attacks A"]
     end
 
     subgraph ACT3["⚖️ ACT III · VERDICT"]
-        direction TB
-        C["🟠 Claude synthesizes final answer"]
+        C["🟠 Claude → Final Answer"]
     end
 
-    ACT1 ==> ACT2 ==> ACT3
+    ACT1 --> ACT2 --> ACT3
 
-    style ACT1 fill:#1e3a5f,stroke:#3b82f6,stroke-width:3px,color:#fff
-    style ACT2 fill:#4a1d1d,stroke:#ef4444,stroke-width:3px,color:#fff
-    style ACT3 fill:#1a3d1a,stroke:#22c55e,stroke-width:3px,color:#fff
+    style ACT1 fill:#1e3a5f,stroke:#3b82f6,stroke-width:2px,color:#fff
+    style ACT2 fill:#4a1d1d,stroke:#ef4444,stroke-width:2px,color:#fff
+    style ACT3 fill:#1a3d1a,stroke:#22c55e,stroke-width:2px,color:#fff
 ```
 
 <div align="center">

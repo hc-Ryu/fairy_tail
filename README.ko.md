@@ -86,29 +86,26 @@
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1e3a5f', 'secondaryColor': '#4a1d1d', 'tertiaryColor': '#1a3d1a'}}}%%
-flowchart LR
+flowchart TB
     subgraph ACT1["🎬 1막 · 해결"]
-        direction TB
-        G1["🔵 Gemini가 A안 제시"]
-        O1["🟢 OpenAI가 B안 제시"]
+        G1["🔵 Gemini → A안"]
+        O1["🟢 OpenAI → B안"]
     end
 
     subgraph ACT2["⚔️ 2막 · 비평"]
-        direction TB
-        G2["🔵 Gemini가 B안 공격"]
-        O2["🟢 OpenAI가 A안 공격"]
+        G2["🔵 Gemini가 B 공격"]
+        O2["🟢 OpenAI가 A 공격"]
     end
 
     subgraph ACT3["⚖️ 3막 · 판결"]
-        direction TB
-        C["🟠 Claude가 최종 답변 종합"]
+        C["🟠 Claude → 최종 답변"]
     end
 
-    ACT1 ==> ACT2 ==> ACT3
+    ACT1 --> ACT2 --> ACT3
 
-    style ACT1 fill:#1e3a5f,stroke:#3b82f6,stroke-width:3px,color:#fff
-    style ACT2 fill:#4a1d1d,stroke:#ef4444,stroke-width:3px,color:#fff
-    style ACT3 fill:#1a3d1a,stroke:#22c55e,stroke-width:3px,color:#fff
+    style ACT1 fill:#1e3a5f,stroke:#3b82f6,stroke-width:2px,color:#fff
+    style ACT2 fill:#4a1d1d,stroke:#ef4444,stroke-width:2px,color:#fff
+    style ACT3 fill:#1a3d1a,stroke:#22c55e,stroke-width:2px,color:#fff
 ```
 
 <div align="center">
