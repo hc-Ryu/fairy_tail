@@ -1,26 +1,133 @@
-# Synod v1.0
+<p align="center">
+  <img src="https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge" alt="Claude Code Plugin"/>
+  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version"/>
+  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>
+</p>
 
-Multi-agent deliberation system for Claude Code - structured debate between Claude, Gemini, and OpenAI for better decision-making.
+<p align="center">
+  <a href="README.md">English</a> | <a href="README.ko.md">한국어</a>
+</p>
+
+<h1 align="center">Synod</h1>
+
+<p align="center">
+  <strong>Multi-Agent Deliberation for Claude Code</strong><br/>
+  <em>Structured debate between Claude, Gemini, and OpenAI for better decision-making</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Claude-Anthropic-orange?style=flat-square" alt="Claude"/>
+  <img src="https://img.shields.io/badge/Gemini-Google-blue?style=flat-square" alt="Gemini"/>
+  <img src="https://img.shields.io/badge/GPT--4o-OpenAI-green?style=flat-square" alt="OpenAI"/>
+</p>
+
+---
+
+## Why Synod?
+
+> Single LLMs suffer from **confirmation bias**, **hallucination**, and **overconfidence**.
+> Synod forces multiple AI models to debate, defend positions, and acknowledge uncertainty.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         SYNOD DEBATE                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Round 1: SOLVER          Round 2: CRITIC        Round 3: DEFENSE
+│   ┌─────────────┐          ┌─────────────┐        ┌─────────────┐
+│   │   Gemini    │          │   Gemini    │        │  Defense    │
+│   │  Solution A │    →     │  Critiques  │   →    │  (Gemini)   │
+│   └─────────────┘          └─────────────┘        └──────┬──────┘
+│                                                          │
+│   ┌─────────────┐          ┌─────────────┐        ┌──────▼──────┐
+│   │   OpenAI    │          │   OpenAI    │        │   Judge     │
+│   │  Solution B │    →     │  Critiques  │   →    │  (Claude)   │
+│   └─────────────┘          └─────────────┘        └──────┬──────┘
+│                                                          │
+│                                                   ┌──────▼──────┐
+│                                                   │ Prosecutor  │
+│                                                   │  (OpenAI)   │
+│                                                   └─────────────┘
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Quick Start
+
+### 1. Install
+
+```bash
+/plugin install quantsquirrel/claude-synod-debate
+```
+
+### 2. Configure API Keys
+
+```bash
+export GEMINI_API_KEY="your-gemini-key"
+export OPENAI_API_KEY="your-openai-key"
+```
+
+### 3. Start Debating
+
+```bash
+/synod review  Is this authentication flow secure?
+/synod design  Design a scalable microservices architecture
+/synod debug   Why is this race condition occurring?
+```
+
+---
 
 ## Features
 
-- **3-round structured debate**: Solver → Critic → Defense/Prosecution
-- **SID (Self-Signals Driven) confidence scoring**: 0-100 scale with semantic focus
-- **CortexDebate Trust Score calculation**: Confidence × Reasoning × Informativeness / Complexity
-- **Anti-conformity instructions**: Prevent premature consensus through Free-MAD methodology
-- **Session resume capability**: Continue previous debates seamlessly
-- **5 specialized modes**: review, design, debug, idea, general
+| Feature | Description |
+|---------|-------------|
+| **3-Round Structured Debate** | Solver → Critic → Defense/Prosecution |
+| **Confidence Scoring** | 0-100 scale with semantic focus (SID methodology) |
+| **Trust Calculation** | CortexDebate formula: `(C × R × I) / S` |
+| **Anti-Conformity** | Free-MAD prevents premature consensus |
+| **Session Resume** | Continue previous debates with `/synod resume` |
+| **5 Specialized Modes** | review, design, debug, idea, general |
+
+---
+
+## Modes
+
+| Mode | Best For | Models | Rounds |
+|:----:|----------|--------|:------:|
+| `review` | Code review, security analysis | Gemini Flash + GPT-4o | 3 |
+| `design` | Architecture, system design | Gemini Pro + GPT-4o | 4 |
+| `debug` | Troubleshooting, root cause analysis | Gemini Flash + GPT-4o | 3 |
+| `idea` | Brainstorming, feature ideation | Gemini Pro + GPT-4o | 4 |
+| `general` | General questions | Gemini Flash + GPT-4o | 3 |
+
+---
+
+## Research Foundation
+
+Synod is built on peer-reviewed multi-agent debate research:
+
+| Methodology | Paper | Contribution |
+|-------------|-------|--------------|
+| **ReConcile** | [ACL 2024](https://arxiv.org/abs/2309.13007) | 3-round convergence pattern |
+| **AgentsCourt** | [2024](https://arxiv.org/abs/2408.08089) | Courtroom-style adversarial debate |
+| **ConfMAD** | [2025](https://arxiv.org/abs/2502.06233) | Confidence-aware soft defer |
+| **A-HMAD** | [AI & Ethics 2025](https://link.springer.com/article/10.1007/s44443-025-00353-3) | Human-like deliberation |
+
+> Research shows **3-round debates capture >95% of quality improvements** with diminishing returns thereafter.
+
+---
 
 ## Installation
 
 ### Prerequisites
 
-- Claude Code CLI (v1.0.0 or later)
-- Python 3.9 or higher
-- API Keys: GEMINI_API_KEY, OPENAI_API_KEY
-- System tools: jq, openssl
+- Claude Code CLI v1.0.0+
+- Python 3.9+
+- API Keys: `GEMINI_API_KEY`, `OPENAI_API_KEY`
 
-### Via Plugin (Recommended)
+### Plugin Installation (Recommended)
 
 ```bash
 /plugin install quantsquirrel/claude-synod-debate
@@ -37,148 +144,41 @@ chmod +x tools/*.py
 export PATH="$PATH:$(pwd)/tools"
 ```
 
-## Configuration
+---
 
-### Required Environment Variables
+## Usage Examples
 
+### Code Review
 ```bash
-export GEMINI_API_KEY="your-gemini-key"
-export OPENAI_API_KEY="your-openai-key"
+/synod review Analyze the performance implications of this recursive function
 ```
 
-### Optional
-
+### Architecture Design
 ```bash
-export SYNOD_SESSION_DIR="~/.synod/sessions"  # Default session storage directory
+/synod design Design a JWT authentication system with refresh tokens
 ```
 
-## Usage
-
-### Basic Syntax
-
-```
-/synod [mode] <prompt>
-```
-
-### Modes
-
-| Mode | Use Case | Models | Rounds |
-|------|----------|--------|--------|
-| review | Code review and analysis | Gemini Flash + GPT-4o | 3 |
-| design | Architecture and system design | Gemini Pro + GPT-4o | 4 |
-| debug | Debugging and troubleshooting | Gemini Flash + GPT-4o | 3 |
-| idea | Brainstorming and ideation | Gemini Pro + GPT-4o | 4 |
-| general | General questions | Gemini Flash + GPT-4o | 3 |
-
-### Examples
-
+### Debugging
 ```bash
-/synod review Analyze the performance of this function
-
-/synod design Design a JWT authentication system
-
-/synod debug Why is this test failing?
-
-/synod idea How can we improve user onboarding?
-
-/synod resume  # Continue previous session
-
-/synod resume <session-id>  # Resume specific session
+/synod debug Why is this test flaky? It passes locally but fails in CI
 ```
 
-## Theoretical Foundation
-
-Synod is built on state-of-the-art multi-agent debate research, combining insights from recent publications in AI reasoning and deliberation systems.
-
-### Why Multi-Agent Debate?
-
-Single LLMs often suffer from:
-- **Confirmation bias**: Reinforcing initial assumptions
-- **Hallucination**: Generating plausible but incorrect information
-- **Overconfidence**: High certainty on wrong answers
-
-Multi-agent debate addresses these by forcing models to:
-1. Defend positions against adversarial critique
-2. Provide evidence for claims
-3. Acknowledge uncertainty through structured confidence scoring
-
-Research shows that 3-round debates capture most quality improvements (>95%), with diminishing returns thereafter ([ReConcile, 2024](https://arxiv.org/abs/2309.13007)).
-
-### Core Methodologies
-
-#### 1. ReConcile - Round-based Convergence
-**Paper**: [ReConcile: Round-Table Conference Improves Reasoning via Consensus (ACL 2024)](https://arxiv.org/abs/2309.13007)
-
-Synod implements the 3-round convergence pattern:
-- **Round 1 (Solver)**: Independent solutions from each agent
-- **Round 2 (Critic)**: Cross-validation and weakness identification
-- **Round 3 (Defense)**: Adversarial refinement of best solution
-
-#### 2. AgentsCourt - Judicial Debate Structure
-**Paper**: [AgentsCourt: Simulating Court with Adversarial Evolvable Lawyer Agents (2024)](https://arxiv.org/abs/2408.08089)
-
-The Defense round uses courtroom roles:
-- **Judge (Claude)**: Neutral arbiter making final decisions
-- **Defense Lawyer (Gemini)**: Advocates for the leading solution
-- **Prosecutor (OpenAI)**: Challenges weaknesses and proposes alternatives
-
-#### 3. ConfMAD - Confidence-based Soft Defer
-**Paper**: [ConfMAD: Confidence-aware Multi-Agent Debate (2025)](https://arxiv.org/abs/2502.06233)
-
-Low-confidence agents defer to higher-confidence peers:
-- Agents with confidence < 50 receive "soft defer hints"
-- Prevents premature consensus from uncertain agents
-- Preserves unique perspectives that might otherwise be lost
-
-#### 4. Free-MAD - Anti-Conformity Protocol
-**Concept**: Majority Aversion Debate
-
-Explicit instructions prevent groupthink:
-```
-ANTI-CONFORMITY INSTRUCTION (CRITICAL)
-Do NOT simply agree with others to reach consensus.
-Your job is ADVERSARIAL - defend your position vigorously.
-Only concede points that are GENUINELY indefensible.
+### Brainstorming
+```bash
+/synod idea How can we improve user onboarding conversion rates?
 ```
 
-#### 5. SID - Self-Signals Driven Confidence
-**Concept**: Structured Self-Assessment
+### Resume Previous Session
+```bash
+/synod resume                              # Most recent session
+/synod resume synod-20260124-143022-a1b    # Specific session
+```
 
-Each agent reports confidence with semantic breakdown:
-- **Evidence**: What facts support the claim?
-- **Logic**: How sound is the reasoning chain?
-- **Expertise**: Domain confidence level
-- **Semantic Focus**: Primary, secondary, tertiary claims
-
-#### 6. CortexDebate - Trust Score Calculation
-**Formula**: `T = min((C × R × I) / S, 2.0)`
-
-| Factor | Description | Range |
-|--------|-------------|-------|
-| C (Credibility) | Evidence quality and verifiability | 0-1 |
-| R (Reliability) | Logical consistency | 0-1 |
-| I (Intimacy) | Relevance to the problem | 0-1 |
-| S (Self-Orientation) | Bias detection (lower is better) | 0.1-1 |
-
-**Thresholds**:
-- T ≥ 1.5: High trust (primary source)
-- T ≥ 1.0: Good trust
-- T ≥ 0.5: Acceptable trust
-- T < 0.5: Exclude from synthesis
-
-### Research References
-
-| Paper | Year | Key Contribution |
-|-------|------|------------------|
-| [ReConcile](https://arxiv.org/abs/2309.13007) | ACL 2024 | 3-round convergence pattern |
-| [AgentsCourt](https://arxiv.org/abs/2408.08089) | 2024 | Courtroom-style adversarial debate |
-| [A-HMAD](https://link.springer.com/article/10.1007/s44443-025-00353-3) | AI & Ethics 2025 | Human-like multi-agent deliberation |
-| [ConfMAD](https://arxiv.org/abs/2502.06233) | 2025 | Confidence-aware soft defer |
-| [Debate Improves Reasoning](https://arxiv.org/abs/2305.14325) | 2023 | Foundation of multi-agent debate |
+---
 
 ## Output Format
 
-Each agent outputs structured XML with confidence scores and semantic focus:
+Each agent outputs structured confidence scores:
 
 ```xml
 <confidence score="85">
@@ -195,144 +195,119 @@ Each agent outputs structured XML with confidence scores and semantic focus:
 </semantic_focus>
 ```
 
-### Interpretation
+### Score Interpretation
 
-- **Score 80+**: High confidence, likely consensus-ready
-- **Score 60-79**: Moderate confidence, needs refinement
-- **Score <60**: Low confidence, requires more analysis
-- **can_exit**: Whether agent can recommend discussion closure
+| Score | Meaning | Action |
+|:-----:|---------|--------|
+| **80+** | High confidence | Consensus-ready |
+| **60-79** | Moderate confidence | Needs refinement |
+| **<60** | Low confidence | Requires more analysis |
+
+---
+
+## Trust Score Calculation
+
+Synod uses the **CortexDebate** formula to calculate trust:
+
+```
+T = min((C × R × I) / S, 2.0)
+```
+
+| Factor | Description | Range |
+|--------|-------------|:-----:|
+| **C** (Credibility) | Evidence quality | 0-1 |
+| **R** (Reliability) | Logical consistency | 0-1 |
+| **I** (Intimacy) | Problem relevance | 0-1 |
+| **S** (Self-Orientation) | Bias level (lower = better) | 0.1-1 |
+
+| Trust Level | Threshold | Treatment |
+|-------------|:---------:|-----------|
+| High | T ≥ 1.5 | Primary source |
+| Good | T ≥ 1.0 | Reliable input |
+| Acceptable | T ≥ 0.5 | Consider with caution |
+| Exclude | T < 0.5 | Omit from synthesis |
+
+---
 
 ## Session Management
 
-Synod stores deliberation sessions in `~/.synod/sessions/` (configurable via SYNOD_SESSION_DIR).
-
-### Session Structure
+Sessions are stored in `~/.synod/sessions/`:
 
 ```
 synod-YYYYMMDD-HHMMSS-xxx/
 ├── meta.json              # Session metadata
-├── status.json            # Current session status
+├── status.json            # Current status
 ├── round-1-solver/        # Solver outputs
 │   ├── gemini_response.json
 │   └── openai_response.json
 ├── round-2-critic/        # Critic outputs
-│   ├── gemini_response.json
-│   └── openai_response.json
-└── round-3-defense/       # Defense/Prosecution outputs
-    ├── gemini_response.json
-    └── openai_response.json
+└── round-3-defense/       # Defense outputs
 ```
 
-### Resuming Sessions
+---
 
-Resume the most recent session:
+## Configuration
+
+### Environment Variables
 
 ```bash
-/synod resume
+# Required
+export GEMINI_API_KEY="your-gemini-key"
+export OPENAI_API_KEY="your-openai-key"
+
+# Optional
+export SYNOD_SESSION_DIR="~/.synod/sessions"
+export SYNOD_RETENTION_DAYS=30
 ```
 
-Resume a specific session by ID:
+### Custom Models
 
-```bash
-/synod resume synod-20260124-143022-a1b
-```
-
-## Tools
-
-Synod includes three specialized tools:
-
-| Tool | Purpose |
-|------|---------|
-| `synod-parser.py` | Parses agent outputs and calculates confidence scores |
-| `gemini-3.py` | Google Gemini integration with adaptive thinking |
-| `openai-cli.py` | OpenAI integration with reasoning support |
-
-All tools include automatic retry logic and graceful fallback modes.
-
-## Troubleshooting
-
-### API Timeouts
-
-Gemini and OpenAI have 110-second internal timeouts with automatic retry:
-
-- First timeout: Retry with exponential backoff
-- Second timeout: Downgrade to adaptive thinking (Gemini) or remove reasoning (OpenAI)
-- Third timeout: Use cached response or return error
-
-### Missing Tools
-
-If `synod-parser` is not found:
-
-- Inline fallback parser activates automatically
-- Full functionality preserved
-- Check: `which synod-parser.py` and `$PATH`
-
-### Configuration Issues
-
-- **Missing API Key**: Verify `echo $GEMINI_API_KEY` and `echo $OPENAI_API_KEY`
-- **Session directory permission error**: Ensure `~/.synod/sessions/` is writable
-- **Python version mismatch**: Verify `python --version` returns 3.9+
-
-### Common Errors
-
-| Error | Solution |
-|-------|----------|
-| `API key not found` | Export required API keys (see Configuration section) |
-| `No such file or directory: ~/.synod/sessions` | Create directory: `mkdir -p ~/.synod/sessions` |
-| `Command not found: /synod` | Install plugin via `/plugin install quantsquirrel/claude-synod-debate` |
-| `Timeout after 3 retries` | Check network connection and API service status |
-
-## Advanced Configuration
-
-### Custom Model Selection
-
-Override default models in `.claude/synod-config.json`:
+Override defaults in `.claude/synod-config.json`:
 
 ```json
 {
   "modes": {
-    "review": {
-      "solver": "gemini-2.0-flash",
-      "critic": "gpt-4o"
-    },
-    "design": {
-      "solver": "gemini-2.0-pro",
-      "critic": "gpt-4-turbo"
-    }
+    "review": { "solver": "gemini-2.0-flash", "critic": "gpt-4o" },
+    "design": { "solver": "gemini-2.0-pro", "critic": "gpt-4-turbo" }
   }
 }
 ```
 
-### Session Retention
+---
 
-Control how long sessions are retained:
+## Troubleshooting
 
-```bash
-export SYNOD_RETENTION_DAYS=30  # Delete sessions older than 30 days
-```
+| Problem | Solution |
+|---------|----------|
+| `API key not found` | Export `GEMINI_API_KEY` and `OPENAI_API_KEY` |
+| `Session directory error` | Run `mkdir -p ~/.synod/sessions` |
+| `Command not found` | Install via `/plugin install quantsquirrel/claude-synod-debate` |
+| `Timeout after retries` | Check network and API service status |
 
-## Performance Considerations
+### Timeout Handling
 
-- **Debate duration**: Typically 2-5 minutes per session
-- **Token usage**: ~5,000-15,000 tokens per 3-round debate (varies by prompt length)
-- **Parallel execution**: Both agents run simultaneously within rounds
-- **Caching**: Recent sessions cached for faster resume
+Synod includes automatic retry with graceful degradation:
 
-## License
+1. **First timeout**: Retry with exponential backoff
+2. **Second timeout**: Downgrade model capabilities
+3. **Third timeout**: Use cached response or return error
 
-MIT License - see [LICENSE](LICENSE) file for details.
+---
 
-Copyright (c) 2026 quantsquirrel
+## Performance
+
+| Metric | Value |
+|--------|-------|
+| **Debate duration** | 2-5 minutes |
+| **Token usage** | 5,000-15,000 per debate |
+| **Execution** | Parallel within rounds |
+| **Caching** | Recent sessions cached |
+
+---
 
 ## Contributing
 
-Issues, bug reports, and pull requests welcome!
-
-- **Issues**: https://github.com/quantsquirrel/claude-synod-debate/issues
-- **Discussions**: https://github.com/quantsquirrel/claude-synod-debate/discussions
-- **Repository**: https://github.com/quantsquirrel/claude-synod-debate
-
-### Development Setup
+We welcome contributions!
 
 ```bash
 git clone https://github.com/quantsquirrel/claude-synod-debate.git
@@ -341,9 +316,12 @@ pip install -r requirements-dev.txt
 pytest tests/
 ```
 
-## Citation
+- [Open an Issue](https://github.com/quantsquirrel/claude-synod-debate/issues)
+- [Join Discussions](https://github.com/quantsquirrel/claude-synod-debate/discussions)
 
-If you use Synod in research or production, please cite:
+---
+
+## Citation
 
 ```bibtex
 @software{synod2026,
@@ -354,18 +332,17 @@ If you use Synod in research or production, please cite:
 }
 ```
 
-## Acknowledgments
+---
 
-Synod builds on research from:
-- CortexDebate (Multi-agent debate with trust scores)
-- Free-MAD (Majority aversion in debate)
-- SID (Self-signals driven confidence)
-- ReConcile (Convergence patterns)
+## License
 
-## Support
+MIT License - see [LICENSE](LICENSE) for details.
 
-For questions and support:
+Copyright (c) 2026 quantsquirrel
 
-- GitHub Discussions: https://github.com/quantsquirrel/claude-synod-debate/discussions
-- Report bugs: https://github.com/quantsquirrel/claude-synod-debate/issues
-- Email: Open an issue for contact information
+---
+
+<p align="center">
+  <strong>Built with insights from</strong><br/>
+  CortexDebate • Free-MAD • SID • ReConcile
+</p>
