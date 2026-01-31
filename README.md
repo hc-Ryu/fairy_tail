@@ -25,35 +25,11 @@
 
 <br/>
 
-<!-- Problem Statement with Visual Impact -->
-<table>
-<tr>
-<td width="33%" align="center">
-<h3>😵‍💫 THE PROBLEM</h3>
-<p>
-Single LLMs are <b>overconfident</b>.<br/>
-They hallucinate.<br/>
-They confirm their own biases.
-</p>
-</td>
-<td width="33%" align="center">
-<h3>⚔️ THE SOLUTION</h3>
-<p>
-Force them to <b>debate</b>.<br/>
-Make them <b>defend</b> positions.<br/>
-Let them <b>challenge</b> each other.
-</p>
-</td>
-<td width="33%" align="center">
-<h3>✅ THE RESULT</h3>
-<p>
-<b>Better decisions.</b><br/>
-Reduced hallucinations.<br/>
-Acknowledged uncertainty.
-</p>
-</td>
-</tr>
-</table>
+<div align="center">
+
+**😵‍💫 Single LLMs are overconfident** &nbsp;→&nbsp; **⚔️ Make them debate** &nbsp;→&nbsp; **✅ Better decisions**
+
+</div>
 
 <br/>
 
