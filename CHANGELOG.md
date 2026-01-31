@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [3.0.0] - 2026-01-24
+## [1.0.0] - 2026-01-31
 
 ### Added
 
@@ -136,7 +136,7 @@ For bug reports, feature requests, or discussions:
 
 ## Upgrade Guide
 
-### Installing v3.0.0
+### Installing v1.0.0
 
 #### Via Plugin (Recommended)
 ```bash
@@ -183,5 +183,5 @@ export SYNOD_SESSION_DIR="~/.synod/sessions"  # Optional, defaults shown
 
 ---
 
-[Unreleased]: https://github.com/quantsquirrel/synod/compare/v3.0.0...HEAD
-[3.0.0]: https://github.com/quantsquirrel/synod/releases/tag/v3.0.0
+[Unreleased]: https://github.com/quantsquirrel/synod/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/quantsquirrel/synod/releases/tag/v1.0.0
