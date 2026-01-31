@@ -1,149 +1,278 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge" alt="Claude Code Plugin"/>
-  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version"/>
-  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>
-  <img src="https://img.shields.io/badge/Research--Backed-5_Papers-purple?style=for-the-badge" alt="Research"/>
-</p>
+<!--
+  ███████╗██╗   ██╗███╗   ██╗ ██████╗ ██████╗
+  ██╔════╝╚██╗ ██╔╝████╗  ██║██╔═══██╗██╔══██╗
+  ███████╗ ╚████╔╝ ██╔██╗ ██║██║   ██║██║  ██║
+  ╚════██║  ╚██╔╝  ██║╚██╗██║██║   ██║██║  ██║
+  ███████║   ██║   ██║ ╚████║╚██████╔╝██████╔╝
+  ╚══════╝   ╚═╝   ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝
+-->
 
-<p align="center">
-  <a href="README.md">English</a> | <a href="README.ko.md">한국어</a>
-</p>
+<div align="center">
 
-<h1 align="center">Synod</h1>
+<img src="https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge" alt="Claude Code Plugin"/>
+<img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version"/>
+<img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>
+<img src="https://img.shields.io/badge/Research--Backed-5_Papers-purple?style=for-the-badge" alt="Research"/>
 
-<p align="center">
-  <strong>Multi-Agent Deliberation for Claude Code</strong><br/>
-  <em>Structured debate between Claude, Gemini, and OpenAI for better decision-making</em>
-</p>
+<br/><br/>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Claude-Anthropic-orange?style=flat-square" alt="Claude"/>
-  <img src="https://img.shields.io/badge/Gemini-Google-blue?style=flat-square" alt="Gemini"/>
-  <img src="https://img.shields.io/badge/GPT--4o-OpenAI-green?style=flat-square" alt="OpenAI"/>
-</p>
+# ⚖️ SYNOD
+
+### *When one AI isn't enough, convene the council.*
+
+<br/>
+
+**[English](README.md)** · **[한국어](README.ko.md)**
+
+<br/>
+
+<img src="https://img.shields.io/badge/Claude-Judge-F97316?style=flat-square&logo=anthropic&logoColor=white" alt="Claude"/>
+<img src="https://img.shields.io/badge/Gemini-Defense-3B82F6?style=flat-square&logo=google&logoColor=white" alt="Gemini"/>
+<img src="https://img.shields.io/badge/GPT--4o-Prosecutor-22C55E?style=flat-square&logo=openai&logoColor=white" alt="OpenAI"/>
+
+</div>
+
+<br/>
+
+<div align="center">
+<table>
+<tr>
+<td align="center" width="33%">
+
+### 🎯 The Problem
+
+Single LLMs are **overconfident**.<br/>
+They hallucinate.<br/>
+They confirm their own biases.
+
+</td>
+<td align="center" width="33%">
+
+### ⚔️ The Solution
+
+Force them to **debate**.<br/>
+Make them **defend** positions.<br/>
+Let them **challenge** each other.
+
+</td>
+<td align="center" width="33%">
+
+### 🏛️ The Result
+
+**Better decisions.**<br/>
+Reduced hallucinations.<br/>
+Acknowledged uncertainty.
+
+</td>
+</tr>
+</table>
+</div>
+
+<br/>
 
 ---
 
-## Why Synod?
+<br/>
 
-> Single LLMs suffer from **confirmation bias**, **hallucination**, and **overconfidence**.
-> Synod forces multiple AI models to debate, defend positions, and acknowledge uncertainty.
+## 🏛️ The Council Chamber
+
+> *"Synod" (Greek: σύνοδος) — an assembly convened to deliberate.*
+
+```
+                              ╔═══════════════════════════════════════╗
+                              ║           🏛️ THE SYNOD               ║
+                              ╠═══════════════════════════════════════╣
+                              ║                                       ║
+    ┌─────────────────────────╫───────────────────────────────────────╫─────────────────────────┐
+    │                         ║                                       ║                         │
+    │   ╭─────────────────╮   ║         ╭─────────────────╮           ║   ╭─────────────────╮   │
+    │   │                 │   ║         │                 │           ║   │                 │   │
+    │   │   🔵 GEMINI     │   ║         │   🟠 CLAUDE     │           ║   │   🟢 GPT-4o     │   │
+    │   │                 │   ║         │                 │           ║   │                 │   │
+    │   │   "Defense"     │◀──╫────────▶│   "Judge"       │◀──────────╫──▶│   "Prosecutor"  │   │
+    │   │                 │   ║         │                 │           ║   │                 │   │
+    │   │   Advocates     │   ║         │   Synthesizes   │           ║   │   Challenges    │   │
+    │   │   Solutions     │   ║         │   Decides       │           ║   │   Weaknesses    │   │
+    │   │                 │   ║         │                 │           ║   │                 │   │
+    │   ╰─────────────────╯   ║         ╰─────────────────╯           ║   ╰─────────────────╯   │
+    │                         ║                                       ║                         │
+    └─────────────────────────╫───────────────────────────────────────╫─────────────────────────┘
+                              ║                                       ║
+                              ╚═══════════════════════════════════════╝
+```
+
+<br/>
+
+---
+
+<br/>
+
+## ⚡ 60-Second Setup
+
+```bash
+# 1️⃣ Install
+/plugin install quantsquirrel/claude-synod-debate
+
+# 2️⃣ Configure (one-time)
+export GEMINI_API_KEY="your-key"
+export OPENAI_API_KEY="your-key"
+
+# 3️⃣ Deliberate
+/synod review Is this auth flow secure?
+```
+
+**That's it.** The council convenes automatically.
+
+<br/>
+
+---
+
+<br/>
+
+## 🎭 The Three Acts
+
+Every Synod session follows a structured deliberation:
+
+<div align="center">
 
 ```mermaid
 flowchart LR
-    subgraph Round1["🎯 Round 1: SOLVER"]
-        G1["🔵 Gemini<br/>Solution A"]
-        O1["🟢 OpenAI<br/>Solution B"]
+    subgraph ACT1["<b>ACT I</b><br/>━━━━━━━━━━━<br/>SOLVE"]
+        direction TB
+        G1["🔵 Gemini<br/><i>proposes A</i>"]
+        O1["🟢 OpenAI<br/><i>proposes B</i>"]
     end
 
-    subgraph Round2["🔍 Round 2: CRITIC"]
-        G2["🔵 Gemini<br/>Critiques"]
-        O2["🟢 OpenAI<br/>Critiques"]
+    subgraph ACT2["<b>ACT II</b><br/>━━━━━━━━━━━<br/>CRITIQUE"]
+        direction TB
+        G2["🔵 Gemini<br/><i>attacks B</i>"]
+        O2["🟢 OpenAI<br/><i>attacks A</i>"]
     end
 
-    subgraph Round3["⚖️ Round 3: DEFENSE"]
-        Defense["🔵 Defense<br/>(Gemini)"]
-        Judge["🟠 Judge<br/>(Claude)"]
-        Prosecutor["🟢 Prosecutor<br/>(OpenAI)"]
+    subgraph ACT3["<b>ACT III</b><br/>━━━━━━━━━━━<br/>VERDICT"]
+        direction TB
+        D["🔵 Defense"]
+        J["🟠 Judge"]
+        P["🟢 Prosecutor"]
     end
 
-    G1 --> G2
-    O1 --> O2
-    G2 --> Defense
-    O2 --> Judge
-    Defense --> Judge
-    Judge --> Prosecutor
-    Prosecutor --> Judge
+    ACT1 ==> ACT2 ==> ACT3
+
+    style ACT1 fill:#1e3a5f,stroke:#3b82f6,stroke-width:2px
+    style ACT2 fill:#4a1d1d,stroke:#ef4444,stroke-width:2px
+    style ACT3 fill:#1a3d1a,stroke:#22c55e,stroke-width:2px
 ```
+
+</div>
+
+<br/>
+
+| Act | What Happens | Why It Matters |
+|:---:|--------------|----------------|
+| **I** | Independent solutions emerge | No groupthink, maximum diversity |
+| **II** | Cross-examination begins | Weaknesses exposed, biases challenged |
+| **III** | Adversarial refinement | Best ideas survive scrutiny |
+
+<br/>
 
 ---
 
-## Quick Start
+<br/>
 
-### 1. Install
+## 🎯 Five Modes of Deliberation
+
+<div align="center">
+
+| | Mode | Summon When... | Council Configuration |
+|:---:|:---:|----------------|----------------------|
+| 🔍 | **`review`** | Analyzing code, security, PRs | Gemini Flash ⚔️ GPT-4o |
+| 🏗️ | **`design`** | Architecting systems | Gemini Pro ⚔️ GPT-4o |
+| 🐛 | **`debug`** | Hunting elusive bugs | Gemini Flash ⚔️ GPT-4o |
+| 💡 | **`idea`** | Brainstorming solutions | Gemini Pro ⚔️ GPT-4o |
+| 🌐 | **`general`** | Everything else | Gemini Flash ⚔️ GPT-4o |
+
+</div>
+
+<br/>
+
+```bash
+/synod review   "Is this recursive function O(n) or O(n²)?"
+/synod design   "Design a rate limiter for 10M requests/day"
+/synod debug    "Why does this only fail on Tuesdays?"
+/synod idea     "How do we reduce checkout abandonment?"
+```
+
+<br/>
+
+---
+
+<br/>
+
+## 📜 Academic Foundation
+
+> *Synod is not just another wrapper. It implements peer-reviewed deliberation protocols.*
+
+<div align="center">
+
+| Protocol | Source | What Synod Implements |
+|:--------:|--------|----------------------|
+| **ReConcile** | [ACL 2024](https://arxiv.org/abs/2309.13007) | 3-round convergence (captures >95% quality gains) |
+| **AgentsCourt** | [arXiv 2024](https://arxiv.org/abs/2408.08089) | Judge/Defense/Prosecutor structure |
+| **ConfMAD** | [arXiv 2025](https://arxiv.org/abs/2502.06233) | Confidence-aware soft defer |
+| **Free-MAD** | Research | Anti-conformity instructions |
+| **SID** | Research | Self-signals driven confidence |
+
+</div>
+
+<br/>
+
+<details>
+<summary><b>📊 The Trust Equation (click to expand)</b></summary>
+
+<br/>
+
+Synod calculates trust using the **CortexDebate** formula:
+
+```
+                    Credibility × Reliability × Intimacy
+    Trust Score = ────────────────────────────────────────
+                          Self-Orientation
+```
+
+| Factor | Measures | Range |
+|--------|----------|:-----:|
+| **C** | Evidence quality | 0–1 |
+| **R** | Logical consistency | 0–1 |
+| **I** | Problem relevance | 0–1 |
+| **S** | Bias level (lower = better) | 0.1–1 |
+
+**Interpretation:**
+- `T ≥ 1.5` → Primary source (high trust)
+- `T ≥ 1.0` → Reliable input
+- `T ≥ 0.5` → Consider with caution
+- `T < 0.5` → Excluded from synthesis
+
+</details>
+
+<br/>
+
+---
+
+<br/>
+
+## 📦 Installation
+
+<details>
+<summary><b>Plugin Installation (Recommended)</b></summary>
 
 ```bash
 /plugin install quantsquirrel/claude-synod-debate
 ```
 
-### 2. Configure API Keys
+</details>
 
-```bash
-export GEMINI_API_KEY="your-gemini-key"
-export OPENAI_API_KEY="your-openai-key"
-```
-
-### 3. Start Debating
-
-```bash
-/synod review  Is this authentication flow secure?
-/synod design  Design a scalable microservices architecture
-/synod debug   Why is this race condition occurring?
-```
-
----
-
-## Demo
-
-> 🎬 Demo video coming soon! Star this repo to get notified.
-
----
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| **3-Round Structured Debate** | Solver → Critic → Defense/Prosecution |
-| **Confidence Scoring** | 0-100 scale with semantic focus (SID methodology) |
-| **Trust Calculation** | CortexDebate formula: `(C × R × I) / S` |
-| **Anti-Conformity** | Free-MAD prevents premature consensus |
-| **Session Resume** | Continue previous debates with `/synod resume` |
-| **5 Specialized Modes** | review, design, debug, idea, general |
-
----
-
-## Modes
-
-| Mode | Best For | Models | Rounds |
-|:----:|----------|--------|:------:|
-| `review` | Code review, security analysis | Gemini Flash + GPT-4o | 3 |
-| `design` | Architecture, system design | Gemini Pro + GPT-4o | 4 |
-| `debug` | Troubleshooting, root cause analysis | Gemini Flash + GPT-4o | 3 |
-| `idea` | Brainstorming, feature ideation | Gemini Pro + GPT-4o | 4 |
-| `general` | General questions | Gemini Flash + GPT-4o | 3 |
-
----
-
-## Research Foundation
-
-Synod is built on peer-reviewed multi-agent debate research:
-
-| Methodology | Paper | Contribution |
-|-------------|-------|--------------|
-| **ReConcile** | [ACL 2024](https://arxiv.org/abs/2309.13007) | 3-round convergence pattern |
-| **AgentsCourt** | [2024](https://arxiv.org/abs/2408.08089) | Courtroom-style adversarial debate |
-| **ConfMAD** | [2025](https://arxiv.org/abs/2502.06233) | Confidence-aware soft defer |
-| **A-HMAD** | [AI & Ethics 2025](https://link.springer.com/article/10.1007/s44443-025-00353-3) | Human-like deliberation |
-
-> Research shows **3-round debates capture >95% of quality improvements** with diminishing returns thereafter.
-
----
-
-## Installation
-
-### Prerequisites
-
-- Claude Code CLI v1.0.0+
-- Python 3.9+
-- API Keys: `GEMINI_API_KEY`, `OPENAI_API_KEY`
-
-### Plugin Installation (Recommended)
-
-```bash
-/plugin install quantsquirrel/claude-synod-debate
-```
-
-### Manual Installation
+<details>
+<summary><b>Manual Installation</b></summary>
 
 ```bash
 git clone https://github.com/quantsquirrel/claude-synod-debate.git
@@ -154,111 +283,10 @@ chmod +x tools/*.py
 export PATH="$PATH:$(pwd)/tools"
 ```
 
----
+</details>
 
-## Usage Examples
-
-### Code Review
-```bash
-/synod review Analyze the performance implications of this recursive function
-```
-
-### Architecture Design
-```bash
-/synod design Design a JWT authentication system with refresh tokens
-```
-
-### Debugging
-```bash
-/synod debug Why is this test flaky? It passes locally but fails in CI
-```
-
-### Brainstorming
-```bash
-/synod idea How can we improve user onboarding conversion rates?
-```
-
-### Resume Previous Session
-```bash
-/synod resume                              # Most recent session
-/synod resume synod-20260124-143022-a1b    # Specific session
-```
-
----
-
-## Output Format
-
-Each agent outputs structured confidence scores:
-
-```xml
-<confidence score="85">
-  <evidence>Specific evidence supporting this position</evidence>
-  <logic>Reasoning chain</logic>
-  <expertise>Domain expertise applied</expertise>
-  <can_exit>true</can_exit>
-</confidence>
-
-<semantic_focus>
-1. Primary claim
-2. Secondary claim
-3. Tertiary claim
-</semantic_focus>
-```
-
-### Score Interpretation
-
-| Score | Meaning | Action |
-|:-----:|---------|--------|
-| **80+** | High confidence | Consensus-ready |
-| **60-79** | Moderate confidence | Needs refinement |
-| **<60** | Low confidence | Requires more analysis |
-
----
-
-## Trust Score Calculation
-
-Synod uses the **CortexDebate** formula to calculate trust:
-
-```
-T = min((C × R × I) / S, 2.0)
-```
-
-| Factor | Description | Range |
-|--------|-------------|:-----:|
-| **C** (Credibility) | Evidence quality | 0-1 |
-| **R** (Reliability) | Logical consistency | 0-1 |
-| **I** (Intimacy) | Problem relevance | 0-1 |
-| **S** (Self-Orientation) | Bias level (lower = better) | 0.1-1 |
-
-| Trust Level | Threshold | Treatment |
-|-------------|:---------:|-----------|
-| High | T ≥ 1.5 | Primary source |
-| Good | T ≥ 1.0 | Reliable input |
-| Acceptable | T ≥ 0.5 | Consider with caution |
-| Exclude | T < 0.5 | Omit from synthesis |
-
----
-
-## Session Management
-
-Sessions are stored in `~/.synod/sessions/`:
-
-```
-synod-YYYYMMDD-HHMMSS-xxx/
-├── meta.json              # Session metadata
-├── status.json            # Current status
-├── round-1-solver/        # Solver outputs
-│   ├── gemini_response.json
-│   └── openai_response.json
-├── round-2-critic/        # Critic outputs
-└── round-3-defense/       # Defense outputs
-```
-
----
-
-## Configuration
-
-### Environment Variables
+<details>
+<summary><b>Configuration</b></summary>
 
 ```bash
 # Required
@@ -270,101 +298,70 @@ export SYNOD_SESSION_DIR="~/.synod/sessions"
 export SYNOD_RETENTION_DAYS=30
 ```
 
-### Custom Models
+</details>
 
-Override defaults in `.claude/synod-config.json`:
-
-```json
-{
-  "modes": {
-    "review": { "solver": "gemini-2.0-flash", "critic": "gpt-4o" },
-    "design": { "solver": "gemini-2.0-pro", "critic": "gpt-4-turbo" }
-  }
-}
-```
+<br/>
 
 ---
 
-## Troubleshooting
+<br/>
 
-| Problem | Solution |
-|---------|----------|
-| `API key not found` | Export `GEMINI_API_KEY` and `OPENAI_API_KEY` |
-| `Session directory error` | Run `mkdir -p ~/.synod/sessions` |
-| `Command not found` | Install via `/plugin install quantsquirrel/claude-synod-debate` |
-| `Timeout after retries` | Check network and API service status |
+## 🎬 Demo
 
-### Timeout Handling
+> *Coming soon. Star this repo to get notified.*
 
-Synod includes automatic retry with graceful degradation:
-
-1. **First timeout**: Retry with exponential backoff
-2. **Second timeout**: Downgrade model capabilities
-3. **Third timeout**: Use cached response or return error
+<br/>
 
 ---
 
-## Performance
+<br/>
 
-| Metric | Value |
-|--------|-------|
-| **Debate duration** | 2-5 minutes |
-| **Token usage** | 5,000-15,000 per debate |
-| **Execution** | Parallel within rounds |
-| **Caching** | Recent sessions cached |
+## 🗺️ Roadmap
 
----
+- [ ] **MCP Server** — Native Claude Code integration
+- [ ] **VS Code Extension** — GUI for debate visualization
+- [ ] **Knowledge Base** — Learning from debate history
+- [ ] **Web Dashboard** — Real-time debate monitoring
+- [ ] **More LLMs** — Llama, Mistral, Claude variants
 
-## Contributing
-
-We welcome contributions!
-
-```bash
-git clone https://github.com/quantsquirrel/claude-synod-debate.git
-cd synod
-pip install -r requirements-dev.txt
-pytest tests/
-```
-
-- [Open an Issue](https://github.com/quantsquirrel/claude-synod-debate/issues)
-- [Join Discussions](https://github.com/quantsquirrel/claude-synod-debate/discussions)
+<br/>
 
 ---
 
-## Citation
+<br/>
+
+<div align="center">
+
+## 🤝 Join the Council
+
+**[Issues](https://github.com/quantsquirrel/claude-synod-debate/issues)** · **[Discussions](https://github.com/quantsquirrel/claude-synod-debate/discussions)** · **[Contributing](CONTRIBUTING.md)**
+
+<br/>
 
 ```bibtex
 @software{synod2026,
-  title = {Synod: Multi-Agent Deliberation System for Claude Code},
+  title  = {Synod: Multi-Agent Deliberation for Claude Code},
   author = {quantsquirrel},
-  year = {2026},
-  url = {https://github.com/quantsquirrel/claude-synod-debate}
+  year   = {2026},
+  url    = {https://github.com/quantsquirrel/claude-synod-debate}
 }
 ```
 
----
-
-## Roadmap
-
-- [ ] MCP Server integration for native Claude Code support
-- [ ] VS Code extension
-- [ ] Session-based knowledge base (learning from debate history)
-- [ ] Web dashboard for visualizing debate flow
-- [ ] Support for additional LLM providers (Llama, Mistral)
-
-See our [discussions](https://github.com/quantsquirrel/claude-synod-debate/discussions) to suggest features!
+<br/>
 
 ---
 
-## License
+<br/>
 
-MIT License - see [LICENSE](LICENSE) for details.
+**MIT License** · Copyright © 2026 quantsquirrel
 
-Copyright (c) 2026 quantsquirrel
+<br/>
 
----
+*Built on the shoulders of*<br/>
+**ReConcile** · **AgentsCourt** · **ConfMAD** · **Free-MAD** · **SID**
 
-<p align="center">
-  <strong>Built with insights from</strong><br/>
-  CortexDebate • Free-MAD • SID • ReConcile
-</p>
+<br/>
+
+<sub>*"In the multitude of counselors there is safety." — Proverbs 11:14*</sub>
+
+</div>
