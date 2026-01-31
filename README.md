@@ -1,222 +1,226 @@
-<!--
-  ███████╗██╗   ██╗███╗   ██╗ ██████╗ ██████╗
-  ██╔════╝╚██╗ ██╔╝████╗  ██║██╔═══██╗██╔══██╗
-  ███████╗ ╚████╔╝ ██╔██╗ ██║██║   ██║██║  ██║
-  ╚════██║  ╚██╔╝  ██║╚██╗██║██║   ██║██║  ██║
-  ███████║   ██║   ██║ ╚████║╚██████╔╝██████╔╝
-  ╚══════╝   ╚═╝   ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝
--->
-
 <div align="center">
 
-<img src="https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge" alt="Claude Code Plugin"/>
-<img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version"/>
-<img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>
-<img src="https://img.shields.io/badge/Research--Backed-5_Papers-purple?style=for-the-badge" alt="Research"/>
+<!-- Dramatic Title Card -->
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,14,25,27&height=200&section=header&text=⚖️%20SYNOD&fontSize=80&fontAlignY=35&desc=When%20one%20AI%20isn%27t%20enough%2C%20convene%20the%20council.&descSize=20&descAlignY=55&animation=fadeIn"/>
 
-<br/><br/>
+<!-- Status Badges with Custom Styling -->
+<p>
+<a href="#-60-second-setup"><img src="https://img.shields.io/badge/⚡_QUICK_START-60_seconds-F97316?style=for-the-badge&labelColor=1a1a2e" alt="Quick Start"/></a>
+<a href="https://arxiv.org/abs/2309.13007"><img src="https://img.shields.io/badge/📚_RESEARCH-5_Papers-8B5CF6?style=for-the-badge&labelColor=1a1a2e" alt="Research"/></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/📜_LICENSE-MIT-22C55E?style=for-the-badge&labelColor=1a1a2e" alt="License"/></a>
+</p>
 
-# ⚖️ SYNOD
-
-### *When one AI isn't enough, convene the council.*
-
-<br/>
-
+<!-- Language Toggle -->
 **[English](README.md)** · **[한국어](README.ko.md)**
 
 <br/>
 
-<img src="https://img.shields.io/badge/Claude-Judge-F97316?style=flat-square&logo=anthropic&logoColor=white" alt="Claude"/>
-<img src="https://img.shields.io/badge/Gemini-Defense-3B82F6?style=flat-square&logo=google&logoColor=white" alt="Gemini"/>
-<img src="https://img.shields.io/badge/GPT--4o-Prosecutor-22C55E?style=flat-square&logo=openai&logoColor=white" alt="OpenAI"/>
-
-</div>
-
-<br/>
-
-<div align="center">
+<!-- The Trinity -->
 <table>
 <tr>
-<td align="center" width="33%">
-
-### 🎯 The Problem
-
-Single LLMs are **overconfident**.<br/>
-They hallucinate.<br/>
-They confirm their own biases.
-
+<td align="center">
+<img src="https://img.shields.io/badge/-GEMINI-3B82F6?style=for-the-badge&logo=google&logoColor=white" alt="Gemini"/><br/>
+<sub><b>🛡️ DEFENSE</b></sub><br/>
+<sub><i>Advocates solutions</i></sub>
 </td>
-<td align="center" width="33%">
-
-### ⚔️ The Solution
-
-Force them to **debate**.<br/>
-Make them **defend** positions.<br/>
-Let them **challenge** each other.
-
+<td align="center">
+<img src="https://img.shields.io/badge/-CLAUDE-F97316?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude"/><br/>
+<sub><b>⚖️ JUDGE</b></sub><br/>
+<sub><i>Synthesizes verdict</i></sub>
 </td>
-<td align="center" width="33%">
-
-### 🏛️ The Result
-
-**Better decisions.**<br/>
-Reduced hallucinations.<br/>
-Acknowledged uncertainty.
-
+<td align="center">
+<img src="https://img.shields.io/badge/-GPT--4o-22C55E?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI"/><br/>
+<sub><b>🗡️ PROSECUTOR</b></sub><br/>
+<sub><i>Challenges weaknesses</i></sub>
 </td>
 </tr>
 </table>
+
+</div>
+
+<br/>
+
+<!-- Problem Statement with Visual Impact -->
+<table>
+<tr>
+<td width="33%" align="center">
+<h3>😵‍💫 THE PROBLEM</h3>
+<p>
+Single LLMs are <b>overconfident</b>.<br/>
+They hallucinate.<br/>
+They confirm their own biases.
+</p>
+</td>
+<td width="33%" align="center">
+<h3>⚔️ THE SOLUTION</h3>
+<p>
+Force them to <b>debate</b>.<br/>
+Make them <b>defend</b> positions.<br/>
+Let them <b>challenge</b> each other.
+</p>
+</td>
+<td width="33%" align="center">
+<h3>✅ THE RESULT</h3>
+<p>
+<b>Better decisions.</b><br/>
+Reduced hallucinations.<br/>
+Acknowledged uncertainty.
+</p>
+</td>
+</tr>
+</table>
+
+<br/>
+
+---
+
+<div align="center">
+
+## 🎭 THE THREE ACTS
+
+*Every deliberation follows the same dramatic structure*
+
+</div>
+
+<br/>
+
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1e3a5f', 'secondaryColor': '#4a1d1d', 'tertiaryColor': '#1a3d1a'}}}%%
+flowchart LR
+    subgraph ACT1["🎬 ACT I · SOLVE"]
+        direction TB
+        G1["🔵 Gemini proposes Solution A"]
+        O1["🟢 OpenAI proposes Solution B"]
+    end
+
+    subgraph ACT2["⚔️ ACT II · CRITIQUE"]
+        direction TB
+        G2["🔵 Gemini attacks Solution B"]
+        O2["🟢 OpenAI attacks Solution A"]
+    end
+
+    subgraph ACT3["⚖️ ACT III · VERDICT"]
+        direction TB
+        C["🟠 Claude synthesizes final answer"]
+    end
+
+    ACT1 ==> ACT2 ==> ACT3
+
+    style ACT1 fill:#1e3a5f,stroke:#3b82f6,stroke-width:3px,color:#fff
+    style ACT2 fill:#4a1d1d,stroke:#ef4444,stroke-width:3px,color:#fff
+    style ACT3 fill:#1a3d1a,stroke:#22c55e,stroke-width:3px,color:#fff
+```
+
+<div align="center">
+
+| Act | What Happens | Why It Matters |
+|:---:|:-------------|:---------------|
+| **I** | Independent solutions emerge | No groupthink — maximum diversity |
+| **II** | Cross-examination begins | Weaknesses exposed — biases challenged |
+| **III** | Adversarial refinement | Best ideas survive scrutiny |
+
 </div>
 
 <br/>
 
 ---
 
-<br/>
+<div align="center">
 
-## 🏛️ The Council Chamber
+## ⚡ 60-SECOND SETUP
 
-> *"Synod" (Greek: σύνοδος) — an assembly convened to deliberate.*
-
-```
-                              ╔═══════════════════════════════════════╗
-                              ║           🏛️ THE SYNOD               ║
-                              ╠═══════════════════════════════════════╣
-                              ║                                       ║
-    ┌─────────────────────────╫───────────────────────────────────────╫─────────────────────────┐
-    │                         ║                                       ║                         │
-    │   ╭─────────────────╮   ║         ╭─────────────────╮           ║   ╭─────────────────╮   │
-    │   │                 │   ║         │                 │           ║   │                 │   │
-    │   │   🔵 GEMINI     │   ║         │   🟠 CLAUDE     │           ║   │   🟢 GPT-4o     │   │
-    │   │                 │   ║         │                 │           ║   │                 │   │
-    │   │   "Defense"     │◀──╫────────▶│   "Judge"       │◀──────────╫──▶│   "Prosecutor"  │   │
-    │   │                 │   ║         │                 │           ║   │                 │   │
-    │   │   Advocates     │   ║         │   Synthesizes   │           ║   │   Challenges    │   │
-    │   │   Solutions     │   ║         │   Decides       │           ║   │   Weaknesses    │   │
-    │   │                 │   ║         │                 │           ║   │                 │   │
-    │   ╰─────────────────╯   ║         ╰─────────────────╯           ║   ╰─────────────────╯   │
-    │                         ║                                       ║                         │
-    └─────────────────────────╫───────────────────────────────────────╫─────────────────────────┘
-                              ║                                       ║
-                              ╚═══════════════════════════════════════╝
-```
-
-<br/>
-
----
-
-<br/>
-
-## ⚡ 60-Second Setup
+</div>
 
 ```bash
-# 1️⃣ Install
+# 1️⃣ Install the plugin
 /plugin install quantsquirrel/claude-synod-debate
 
-# 2️⃣ Configure (one-time)
-export GEMINI_API_KEY="your-key"
-export OPENAI_API_KEY="your-key"
+# 2️⃣ Set your API keys (one-time)
+export GEMINI_API_KEY="your-gemini-key"
+export OPENAI_API_KEY="your-openai-key"
 
-# 3️⃣ Deliberate
-/synod review Is this auth flow secure?
+# 3️⃣ Summon the council
+/synod review Is this authentication flow secure?
 ```
+
+<div align="center">
 
 **That's it.** The council convenes automatically.
 
 <br/>
 
----
-
-<br/>
-
-## 🎭 The Three Acts
-
-Every Synod session follows a structured deliberation:
-
-<div align="center">
-
-```mermaid
-flowchart LR
-    subgraph ACT1["<b>ACT I</b><br/>━━━━━━━━━━━<br/>SOLVE"]
-        direction TB
-        G1["🔵 Gemini<br/><i>proposes A</i>"]
-        O1["🟢 OpenAI<br/><i>proposes B</i>"]
-    end
-
-    subgraph ACT2["<b>ACT II</b><br/>━━━━━━━━━━━<br/>CRITIQUE"]
-        direction TB
-        G2["🔵 Gemini<br/><i>attacks B</i>"]
-        O2["🟢 OpenAI<br/><i>attacks A</i>"]
-    end
-
-    subgraph ACT3["<b>ACT III</b><br/>━━━━━━━━━━━<br/>VERDICT"]
-        direction TB
-        D["🔵 Defense"]
-        J["🟠 Judge"]
-        P["🟢 Prosecutor"]
-    end
-
-    ACT1 ==> ACT2 ==> ACT3
-
-    style ACT1 fill:#1e3a5f,stroke:#3b82f6,stroke-width:2px
-    style ACT2 fill:#4a1d1d,stroke:#ef4444,stroke-width:2px
-    style ACT3 fill:#1a3d1a,stroke:#22c55e,stroke-width:2px
-```
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&customColorList=12,14,25&height=2" width="50%"/>
 
 </div>
 
 <br/>
 
-| Act | What Happens | Why It Matters |
-|:---:|--------------|----------------|
-| **I** | Independent solutions emerge | No groupthink, maximum diversity |
-| **II** | Cross-examination begins | Weaknesses exposed, biases challenged |
-| **III** | Adversarial refinement | Best ideas survive scrutiny |
-
-<br/>
-
 ---
-
-<br/>
-
-## 🎯 Five Modes of Deliberation
 
 <div align="center">
 
-| | Mode | Summon When... | Council Configuration |
-|:---:|:---:|----------------|----------------------|
-| 🔍 | **`review`** | Analyzing code, security, PRs | Gemini Flash ⚔️ GPT-4o |
-| 🏗️ | **`design`** | Architecting systems | Gemini Pro ⚔️ GPT-4o |
-| 🐛 | **`debug`** | Hunting elusive bugs | Gemini Flash ⚔️ GPT-4o |
-| 💡 | **`idea`** | Brainstorming solutions | Gemini Pro ⚔️ GPT-4o |
-| 🌐 | **`general`** | Everything else | Gemini Flash ⚔️ GPT-4o |
+## 🎯 FIVE MODES OF DELIBERATION
+
+*Choose your council configuration*
 
 </div>
+
+<br/>
+
+<div align="center">
+
+| | Mode | Summon When... | Configuration |
+|:---:|:---:|:---------------|:--------------|
+| 🔍 | **`review`** | Analyzing code, security, PRs | `Gemini Flash` ⚔️ `GPT-4o` |
+| 🏗️ | **`design`** | Architecting systems | `Gemini Pro` ⚔️ `GPT-4o` |
+| 🐛 | **`debug`** | Hunting elusive bugs | `Gemini Flash` ⚔️ `GPT-4o` |
+| 💡 | **`idea`** | Brainstorming solutions | `Gemini Pro` ⚔️ `GPT-4o` |
+| 🌐 | **`general`** | Everything else | `Gemini Flash` ⚔️ `GPT-4o` |
+
+</div>
+
+<br/>
+
+<details>
+<summary><b>📝 Example Commands</b></summary>
 
 <br/>
 
 ```bash
-/synod review   "Is this recursive function O(n) or O(n²)?"
-/synod design   "Design a rate limiter for 10M requests/day"
-/synod debug    "Why does this only fail on Tuesdays?"
-/synod idea     "How do we reduce checkout abandonment?"
+# Code review
+/synod review "Is this recursive function O(n) or O(n²)?"
+
+# System design
+/synod design "Design a rate limiter for 10M requests/day"
+
+# Debugging
+/synod debug "Why does this only fail on Tuesdays?"
+
+# Brainstorming
+/synod idea "How do we reduce checkout abandonment?"
 ```
+
+</details>
 
 <br/>
 
 ---
 
+<div align="center">
+
+## 📜 ACADEMIC FOUNDATION
+
+*Not just another wrapper — peer-reviewed deliberation protocols*
+
+</div>
+
 <br/>
-
-## 📜 Academic Foundation
-
-> *Synod is not just another wrapper. It implements peer-reviewed deliberation protocols.*
 
 <div align="center">
 
 | Protocol | Source | What Synod Implements |
-|:--------:|--------|----------------------|
-| **ReConcile** | [ACL 2024](https://arxiv.org/abs/2309.13007) | 3-round convergence (captures >95% quality gains) |
+|:--------:|:-------|:----------------------|
+| **ReConcile** | [ACL 2024](https://arxiv.org/abs/2309.13007) | 3-round convergence (>95% quality gains) |
 | **AgentsCourt** | [arXiv 2024](https://arxiv.org/abs/2408.08089) | Judge/Defense/Prosecutor structure |
 | **ConfMAD** | [arXiv 2025](https://arxiv.org/abs/2502.06233) | Confidence-aware soft defer |
 | **Free-MAD** | Research | Anti-conformity instructions |
@@ -227,20 +231,20 @@ flowchart LR
 <br/>
 
 <details>
-<summary><b>📊 The Trust Equation (click to expand)</b></summary>
+<summary><b>📊 The Trust Equation</b></summary>
 
 <br/>
 
 Synod calculates trust using the **CortexDebate** formula:
 
 ```
-                    Credibility × Reliability × Intimacy
-    Trust Score = ────────────────────────────────────────
-                          Self-Orientation
+                Credibility × Reliability × Intimacy
+Trust Score = ────────────────────────────────────────
+                      Self-Orientation
 ```
 
 | Factor | Measures | Range |
-|--------|----------|:-----:|
+|:------:|:---------|:-----:|
 | **C** | Evidence quality | 0–1 |
 | **R** | Logical consistency | 0–1 |
 | **I** | Problem relevance | 0–1 |
@@ -258,12 +262,16 @@ Synod calculates trust using the **CortexDebate** formula:
 
 ---
 
-<br/>
+<div align="center">
 
-## 📦 Installation
+## 📦 INSTALLATION
+
+</div>
 
 <details>
-<summary><b>Plugin Installation (Recommended)</b></summary>
+<summary><b>🚀 Plugin Installation (Recommended)</b></summary>
+
+<br/>
 
 ```bash
 /plugin install quantsquirrel/claude-synod-debate
@@ -272,7 +280,9 @@ Synod calculates trust using the **CortexDebate** formula:
 </details>
 
 <details>
-<summary><b>Manual Installation</b></summary>
+<summary><b>🔧 Manual Installation</b></summary>
+
+<br/>
 
 ```bash
 git clone https://github.com/quantsquirrel/claude-synod-debate.git
@@ -286,7 +296,9 @@ export PATH="$PATH:$(pwd)/tools"
 </details>
 
 <details>
-<summary><b>Configuration</b></summary>
+<summary><b>⚙️ Configuration</b></summary>
+
+<br/>
 
 ```bash
 # Required
@@ -304,19 +316,11 @@ export SYNOD_RETENTION_DAYS=30
 
 ---
 
-<br/>
+<div align="center">
 
-## 🎬 Demo
+## 🗺️ ROADMAP
 
-> *Coming soon. Star this repo to get notified.*
-
-<br/>
-
----
-
-<br/>
-
-## 🗺️ Roadmap
+</div>
 
 - [ ] **MCP Server** — Native Claude Code integration
 - [ ] **VS Code Extension** — GUI for debate visualization
@@ -328,11 +332,9 @@ export SYNOD_RETENTION_DAYS=30
 
 ---
 
-<br/>
-
 <div align="center">
 
-## 🤝 Join the Council
+## 🤝 JOIN THE COUNCIL
 
 **[Issues](https://github.com/quantsquirrel/claude-synod-debate/issues)** · **[Discussions](https://github.com/quantsquirrel/claude-synod-debate/discussions)** · **[Contributing](CONTRIBUTING.md)**
 
@@ -351,17 +353,18 @@ export SYNOD_RETENTION_DAYS=30
 
 ---
 
-<br/>
-
 **MIT License** · Copyright © 2026 quantsquirrel
-
-<br/>
 
 *Built on the shoulders of*<br/>
 **ReConcile** · **AgentsCourt** · **ConfMAD** · **Free-MAD** · **SID**
 
 <br/>
 
-<sub>*"In the multitude of counselors there is safety." — Proverbs 11:14*</sub>
+> *"In the multitude of counselors there is safety."*<br/>
+> — Proverbs 11:14
+
+<br/>
+
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,14,25,27&height=100&section=footer"/>
 
 </div>
