@@ -337,18 +337,21 @@ export SYNOD_RETENTION_DAYS=30
 
 <br/>
 
+<details>
+<summary><b>📖 인용</b></summary>
+
 ```bibtex
 @software{synod2026,
-  title  = {Synod: Multi-Agent Deliberation for Claude Code},
-  author = {quantsquirrel},
-  year   = {2026},
-  url    = {https://github.com/quantsquirrel/claude-synod-debate}
+  title   = {Synod: Multi-Agent Deliberation for Claude Code},
+  author  = {quantsquirrel},
+  year    = {2026},
+  url     = {https://github.com/quantsquirrel/claude-synod-debate}
 }
 ```
 
-<br/>
+</details>
 
----
+<br/>
 
 **MIT 라이선스** · Copyright © 2026 quantsquirrel
 
