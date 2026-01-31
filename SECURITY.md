@@ -4,10 +4,10 @@
 
 | Version | Status | Supported Until |
 |---------|--------|-----------------|
-| 3.0.x   | Supported | Current release |
-| < 3.0   | Unsupported | Not maintained |
+| 1.0.x   | Supported | Current release |
+| < 1.0   | Unsupported | Not maintained |
 
-Only the latest 3.0.x release receives security updates and patches.
+Only the latest 1.0.x release receives security updates and patches.
 
 ## Reporting a Vulnerability
 
@@ -17,7 +17,7 @@ We take security seriously. If you discover a vulnerability, please report it re
 
 Use GitHub's private vulnerability disclosure feature:
 
-1. Go to the [Security tab](https://github.com/quantsquirrel/synod/security) in the Synod repository
+1. Go to the [Security tab](https://github.com/quantsquirrel/claude-synod-debate/security) in the Synod repository
 2. Click "Report a vulnerability"
 3. Complete the vulnerability details form
 4. Your report will be reviewed privately by the maintainers

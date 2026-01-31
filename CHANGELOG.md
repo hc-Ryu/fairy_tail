@@ -130,9 +130,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## How to Report Issues
 
 For bug reports, feature requests, or discussions:
-- **Issues**: https://github.com/quantsquirrel/synod/issues
-- **Discussions**: https://github.com/quantsquirrel/synod/discussions
-- **Repository**: https://github.com/quantsquirrel/synod
+- **Issues**: https://github.com/quantsquirrel/claude-synod-debate/issues
+- **Discussions**: https://github.com/quantsquirrel/claude-synod-debate/discussions
+- **Repository**: https://github.com/quantsquirrel/claude-synod-debate
 
 ## Upgrade Guide
 
@@ -140,12 +140,12 @@ For bug reports, feature requests, or discussions:
 
 #### Via Plugin (Recommended)
 ```bash
-/plugin install quantsquirrel/synod
+/plugin install quantsquirrel/claude-synod-debate
 ```
 
 #### Manual Installation
 ```bash
-git clone https://github.com/quantsquirrel/synod.git
+git clone https://github.com/quantsquirrel/claude-synod-debate.git
 cd synod
 pip install -r requirements.txt
 cp skills/*.md ~/.claude/commands/
@@ -183,5 +183,5 @@ export SYNOD_SESSION_DIR="~/.synod/sessions"  # Optional, defaults shown
 
 ---
 
-[Unreleased]: https://github.com/quantsquirrel/synod/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/quantsquirrel/synod/releases/tag/v1.0.0
+[Unreleased]: https://github.com/quantsquirrel/claude-synod-debate/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/quantsquirrel/claude-synod-debate/releases/tag/v1.0.0

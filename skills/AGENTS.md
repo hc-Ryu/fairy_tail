@@ -3,7 +3,7 @@
 
 # Skills Directory - Synod Multi-Agent Deliberation System
 
-This directory contains Claude Code skill definitions for the Synod v3.0 multi-agent deliberation plugin. Skills are executable commands that users invoke via the Claude Code CLI to trigger structured multi-model debate.
+This directory contains Claude Code skill definitions for the Synod v1.0 multi-agent deliberation plugin. Skills are executable commands that users invoke via the Claude Code CLI to trigger structured multi-model debate.
 
 **Directory:** `/Users/ahnjundaram_g/dev/tools/synod-plugin/skills/`
 
@@ -24,13 +24,13 @@ Synod provides two primary skills:
 
 ### 1. synod.md - Multi-Agent Deliberation Orchestrator
 
-**Description:** Multi-agent debate system with Gemini and OpenAI integration (Synod v3.0)
+**Description:** Multi-agent debate system with Gemini and OpenAI integration (Synod v1.0)
 
 **File:** `synod.md`
 
 **Metadata:**
 ```yaml
-description: Multi-agent debate system with Gemini and OpenAI integration (Synod v3.0)
+description: Multi-agent debate system with Gemini and OpenAI integration (Synod v1.0)
 argument-hint: [mode] [prompt] - modes: review|design|debug|idea|resume
 allowed-tools: [Read, Write, Bash, Glob, Grep, Task]
 ```
@@ -540,6 +540,6 @@ cat ~/.synod/sessions/synod-YYYYMMDD-HHMMSS-xxx/round-2-critic/trust-scores.json
 ---
 
 **Generated:** 2026-01-31
-**Version:** Synod v3.0
+**Version:** Synod v1.0
 **Skills:** 2 (synod, cancel-synod)
 **Status:** Complete

@@ -15,7 +15,7 @@
       },
       "source": "./",
       "category": "productivity",
-      "homepage": "https://github.com/quantsquirrel/synod",
+      "homepage": "https://github.com/quantsquirrel/claude-synod-debate",
       "tags": ["multi-agent", "deliberation", "debate", "gemini", "openai", "decision-making"]
     }
   ]

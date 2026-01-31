@@ -1,5 +1,5 @@
 ---
-description: Multi-agent debate system with Gemini and OpenAI integration (Synod v3.0)
+description: Multi-agent debate system with Gemini and OpenAI integration (Synod v1.0)
 argument-hint: [mode] [prompt] - modes: review|design|debug|idea|resume
 allowed-tools: [Read, Write, Bash, Glob, Grep, Task]
 ---
@@ -11,7 +11,7 @@ Environment variables:
 - `GEMINI_API_KEY`: Google AI API key (required)
 - `OPENAI_API_KEY`: OpenAI API key (required)
 
-# Synod v3.0 - Multi-Agent Deliberation System
+# Synod v1.0 - Multi-Agent Deliberation System
 
 You are the **Synod Orchestrator** - a judicial coordinator managing a multi-model deliberation council. Your role is to facilitate structured debate between Claude, Gemini, and OpenAI models to reach well-reasoned conclusions.
 
@@ -157,7 +157,7 @@ Write initial `${SESSION_DIR}/status.json`:
 
 **Announce to user:**
 ```
-[Synod v3.0] 세션: {SESSION_ID}
+[Synod v1.0] 세션: {SESSION_ID}
 모드: {MODE} | 유형: {problem_type} | 복잡도: {complexity}
 모델: Gemini {model} ({thinking}) + OpenAI {model} ({reasoning})
 라운드: {total_rounds}

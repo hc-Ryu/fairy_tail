@@ -1,10 +1,10 @@
-# Synod v3.0 - Agent Architecture Documentation
+# Synod v1.0 - Agent Architecture Documentation
 
 **Project:** Multi-agent deliberation system for Claude Code
-**Version:** 3.0.0
+**Version:** 1.0.0
 **Generated:** 2026-01-31
 **License:** MIT
-**Repository:** https://github.com/quantsquirrel/synod
+**Repository:** https://github.com/quantsquirrel/claude-synod-debate
 
 ---
 
@@ -1412,8 +1412,8 @@ chmod +x tools/*.py
 
 ### Getting Help
 
-**GitHub Issues:** https://github.com/quantsquirrel/synod/issues
-**GitHub Discussions:** https://github.com/quantsquirrel/synod/discussions
+**GitHub Issues:** https://github.com/quantsquirrel/claude-synod-debate/issues
+**GitHub Discussions:** https://github.com/quantsquirrel/claude-synod-debate/discussions
 **Local Testing:** Run benchmark suite for validation
 
 ---

@@ -1,4 +1,4 @@
-# Synod v3.0
+# Synod v1.0
 
 Multi-agent deliberation system for Claude Code - structured debate between Claude, Gemini, and OpenAI for better decision-making.
 
@@ -23,13 +23,13 @@ Multi-agent deliberation system for Claude Code - structured debate between Clau
 ### Via Plugin (Recommended)
 
 ```bash
-/plugin install quantsquirrel/synod
+/plugin install quantsquirrel/claude-synod-debate
 ```
 
 ### Manual Installation
 
 ```bash
-git clone https://github.com/quantsquirrel/synod.git
+git clone https://github.com/quantsquirrel/claude-synod-debate.git
 cd synod
 pip install -r requirements.txt
 cp skills/*.md ~/.claude/commands/
@@ -279,7 +279,7 @@ If `synod-parser` is not found:
 |-------|----------|
 | `API key not found` | Export required API keys (see Configuration section) |
 | `No such file or directory: ~/.synod/sessions` | Create directory: `mkdir -p ~/.synod/sessions` |
-| `Command not found: /synod` | Install plugin via `/plugin install quantsquirrel/synod` |
+| `Command not found: /synod` | Install plugin via `/plugin install quantsquirrel/claude-synod-debate` |
 | `Timeout after 3 retries` | Check network connection and API service status |
 
 ## Advanced Configuration
@@ -328,14 +328,14 @@ Copyright (c) 2026 quantsquirrel
 
 Issues, bug reports, and pull requests welcome!
 
-- **Issues**: https://github.com/quantsquirrel/synod/issues
-- **Discussions**: https://github.com/quantsquirrel/synod/discussions
-- **Repository**: https://github.com/quantsquirrel/synod
+- **Issues**: https://github.com/quantsquirrel/claude-synod-debate/issues
+- **Discussions**: https://github.com/quantsquirrel/claude-synod-debate/discussions
+- **Repository**: https://github.com/quantsquirrel/claude-synod-debate
 
 ### Development Setup
 
 ```bash
-git clone https://github.com/quantsquirrel/synod.git
+git clone https://github.com/quantsquirrel/claude-synod-debate.git
 cd synod
 pip install -r requirements-dev.txt
 pytest tests/
@@ -350,7 +350,7 @@ If you use Synod in research or production, please cite:
   title = {Synod: Multi-Agent Deliberation System for Claude Code},
   author = {quantsquirrel},
   year = {2026},
-  url = {https://github.com/quantsquirrel/synod}
+  url = {https://github.com/quantsquirrel/claude-synod-debate}
 }
 ```
 
@@ -366,6 +366,6 @@ Synod builds on research from:
 
 For questions and support:
 
-- GitHub Discussions: https://github.com/quantsquirrel/synod/discussions
-- Report bugs: https://github.com/quantsquirrel/synod/issues
+- GitHub Discussions: https://github.com/quantsquirrel/claude-synod-debate/discussions
+- Report bugs: https://github.com/quantsquirrel/claude-synod-debate/issues
 - Email: Open an issue for contact information

@@ -5,8 +5,8 @@
   "author": {
     "name": "quantsquirrel"
   },
-  "repository": "https://github.com/quantsquirrel/synod",
-  "homepage": "https://github.com/quantsquirrel/synod",
+  "repository": "https://github.com/quantsquirrel/claude-synod-debate",
+  "homepage": "https://github.com/quantsquirrel/claude-synod-debate",
   "license": "MIT",
   "keywords": [
     "claude-code",

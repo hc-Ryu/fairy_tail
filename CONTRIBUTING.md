@@ -8,7 +8,7 @@ By participating in this project, you are expected to be respectful and construc
 
 ## Reporting Bugs
 
-Found a bug? Please report it on our [GitHub Issues](https://github.com/quantsquirrel/synod/issues) page.
+Found a bug? Please report it on our [GitHub Issues](https://github.com/quantsquirrel/claude-synod-debate/issues) page.
 
 When reporting a bug, please include:
 - A clear, descriptive title
@@ -20,7 +20,7 @@ When reporting a bug, please include:
 
 ## Suggesting Features
 
-Have an idea for a feature? Open a [GitHub Issue](https://github.com/quantsquirrel/synod/issues) with the label `enhancement`.
+Have an idea for a feature? Open a [GitHub Issue](https://github.com/quantsquirrel/claude-synod-debate/issues) with the label `enhancement`.
 
 Please describe:
 - The use case and motivation
@@ -33,7 +33,7 @@ Please describe:
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/quantsquirrel/synod.git
+git clone https://github.com/quantsquirrel/claude-synod-debate.git
 cd synod
 ```
 
