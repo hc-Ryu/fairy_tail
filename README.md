@@ -2,6 +2,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge" alt="Claude Code Plugin"/>
   <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version"/>
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>
+  <img src="https://img.shields.io/badge/Research--Backed-5_Papers-purple?style=for-the-badge" alt="Research"/>
 </p>
 
 <p align="center">
@@ -79,6 +80,12 @@ export OPENAI_API_KEY="your-openai-key"
 /synod design  Design a scalable microservices architecture
 /synod debug   Why is this race condition occurring?
 ```
+
+---
+
+## Demo
+
+> 🎬 Demo video coming soon! Star this repo to get notified.
 
 ---
 
@@ -334,6 +341,18 @@ pytest tests/
   url = {https://github.com/quantsquirrel/claude-synod-debate}
 }
 ```
+
+---
+
+## Roadmap
+
+- [ ] MCP Server integration for native Claude Code support
+- [ ] VS Code extension
+- [ ] Session-based knowledge base (learning from debate history)
+- [ ] Web dashboard for visualizing debate flow
+- [ ] Support for additional LLM providers (Llama, Mistral)
+
+See our [discussions](https://github.com/quantsquirrel/claude-synod-debate/discussions) to suggest features!
 
 ---
 

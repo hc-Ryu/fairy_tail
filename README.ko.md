@@ -2,6 +2,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge" alt="Claude Code Plugin"/>
   <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version"/>
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>
+  <img src="https://img.shields.io/badge/Research--Backed-5_Papers-purple?style=for-the-badge" alt="Research"/>
 </p>
 
 <p align="center">
@@ -79,6 +80,12 @@ export OPENAI_API_KEY="your-openai-key"
 /synod design  확장 가능한 마이크로서비스 아키텍처를 설계해주세요
 /synod debug   이 레이스 컨디션이 왜 발생하나요?
 ```
+
+---
+
+## 데모
+
+> 🎬 데모 영상 준비 중입니다! 이 저장소에 스타를 눌러 알림을 받으세요.
 
 ---
 
@@ -334,6 +341,18 @@ pytest tests/
   url = {https://github.com/quantsquirrel/claude-synod-debate}
 }
 ```
+
+---
+
+## 로드맵
+
+- [ ] 네이티브 Claude Code 지원을 위한 MCP 서버 통합
+- [ ] VS Code 확장
+- [ ] 세션 기반 지식 베이스 (토론 히스토리 학습)
+- [ ] 토론 흐름 시각화를 위한 웹 대시보드
+- [ ] 추가 LLM 제공자 지원 (Llama, Mistral)
+
+기능 제안은 [토론](https://github.com/quantsquirrel/claude-synod-debate/discussions)에서 해주세요!
 
 ---
 
