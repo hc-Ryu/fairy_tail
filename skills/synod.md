@@ -1,17 +1,10 @@
 ---
-description: Multi-agent debate system with Gemini and OpenAI integration (Synod v1.0)
+description: Multi-agent debate system with Gemini and OpenAI integration (Synod v1.0.1)
 argument-hint: [mode] [prompt] - modes: review|design|debug|idea|resume
 allowed-tools: [Read, Write, Bash, Glob, Grep, Task]
 ---
 
-## Configuration
-
-Environment variables:
-- `SYNOD_SESSION_DIR`: Session storage directory (default: `~/.synod/sessions`)
-- `GEMINI_API_KEY`: Google AI API key (required)
-- `OPENAI_API_KEY`: OpenAI API key (required)
-
-# Synod v1.0 - Multi-Agent Deliberation System
+# Synod v1.0.1 - Multi-Agent Deliberation System
 
 You are the **Synod Orchestrator** - a judicial coordinator managing a multi-model deliberation council. Your role is to facilitate structured debate between Claude, Gemini, and OpenAI models to reach well-reasoned conclusions.
 
@@ -85,20 +78,20 @@ Based on MODE, select configurations:
 | `idea` | pro | high | gpt4o | - | 4 |
 | `general` | flash | medium | gpt4o | - | 3 |
 
-### Step 0.4b: Temperature Configuration
+### Step 0.4b: Creativity Configuration
 
-#### Model Temperature Settings
+#### Model Creativity Settings
 
-| Model | Temperature | Flag | Notes |
-|-------|-------------|------|-------|
-| Gemini (Solver/Defense) | 0.7 | `--temperature 0.7` | 창의성 + 정확성 균형 |
-| Gemini (Critic) | 0.5 | `--temperature 0.5` | 분석적 평가 |
-| OpenAI o3 | **1.0 (고정)** | N/A | Temperature 조정 불가 |
-| OpenAI gpt4o | 0.7 | `--temperature 0.7` | 일반 chat 모델 |
+| Model | Creativity Level | Flag | Notes |
+|-------|-----------------|------|-------|
+| Gemini (Solver/Defense) | high | `--thinking high` | 창의성 + 정확성 균형 |
+| Gemini (Critic) | medium | `--thinking medium` | 분석적 평가 |
+| OpenAI o3 | high | `--reasoning high` | 심층 추론 |
+| OpenAI gpt4o | medium | `--reasoning medium` | 균형잡힌 응답 |
 
-**CRITICAL: o3 Temperature Constraint**
+**NOTE: CLI Parameter Mapping**
 
-o3/o4-mini 모델은 Temperature를 조정할 수 없습니다:
+각 CLI는 Temperature 대신 다른 창의성 파라미터를 사용합니다:
 - temperature: 1.0 (고정)
 - top_p: 1.0 (고정)
 
@@ -118,8 +111,7 @@ o3/o4-mini 모델은 Temperature를 조정할 수 없습니다:
 
 ```bash
 SESSION_ID="synod-$(date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)"
-SYNOD_BASE="${SYNOD_SESSION_DIR:-${HOME}/.synod/sessions}"
-SESSION_DIR="${SYNOD_BASE}/${SESSION_ID}"
+SESSION_DIR=".omc/synod/${SESSION_ID}"
 mkdir -p "${SESSION_DIR}/round-1-solver"
 mkdir -p "${SESSION_DIR}/round-2-critic"
 mkdir -p "${SESSION_DIR}/round-3-defense"
@@ -157,7 +149,7 @@ Write initial `${SESSION_DIR}/status.json`:
 
 **Announce to user:**
 ```
-[Synod v1.0] 세션: {SESSION_ID}
+[Synod v1.0.1] 세션: {SESSION_ID}
 모드: {MODE} | 유형: {problem_type} | 복잡도: {complexity}
 모델: Gemini {model} ({thinking}) + OpenAI {model} ({reasoning})
 라운드: {total_rounds}
@@ -274,7 +266,7 @@ TEMP_DIR="/tmp/synod-${SESSION_ID}"
 
 # Gemini execution with completion marker
 (
-  timeout 110 gemini-3 --model {GEMINI_MODEL} --thinking {GEMINI_THINKING} --temperature 0.7 \
+  gemini-3 --model {GEMINI_MODEL} --thinking {GEMINI_THINKING} --timeout 110 \
     < "${TEMP_DIR}/gemini-prompt.txt" \
     > "${TEMP_DIR}/gemini-response.txt" 2>&1
   echo $? > "${TEMP_DIR}/gemini-exit-code"
@@ -283,7 +275,7 @@ GEMINI_PID=$!
 
 # OpenAI execution with completion marker
 (
-  timeout 110 openai-cli --model {OPENAI_MODEL} {--reasoning REASONING if o3} \
+  openai-cli --model {OPENAI_MODEL} {--reasoning REASONING if o3} --timeout 110 \
     < "${TEMP_DIR}/openai-prompt.txt" \
     > "${TEMP_DIR}/openai-response.txt" 2>&1
   echo $? > "${TEMP_DIR}/openai-exit-code"
@@ -545,8 +537,8 @@ Validate claims from the Solver round. Focus on:
 
 Execute:
 ```bash
-# Gemini Critic execution (lower temperature for analytical evaluation)
-timeout 120 gemini-3 --model {GEMINI_MODEL} --thinking {GEMINI_THINKING} --temperature 0.5 < "${TEMP_DIR}/gemini-critic-prompt.txt" > "${TEMP_DIR}/gemini-critique.txt" 2>&1 &
+# Gemini Critic execution (medium thinking for analytical evaluation)
+gemini-3 --model {GEMINI_MODEL} --thinking {GEMINI_THINKING} --timeout 120 < "${TEMP_DIR}/gemini-critic-prompt.txt" > "${TEMP_DIR}/gemini-critique.txt" 2>&1 &
 ```
 
 ### Step 2.3: OpenAI Critic Execution
@@ -1050,8 +1042,7 @@ Default values:
 ### Step R.1: Find Latest Session
 
 ```bash
-SYNOD_BASE="${SYNOD_SESSION_DIR:-${HOME}/.synod/sessions}"
-LATEST=$(ls -td ${SYNOD_BASE}/synod-* 2>/dev/null | head -1)
+LATEST=$(ls -td .omc/synod/synod-* 2>/dev/null | head -1)
 ```
 
 If no session found: "재개할 활성 Synod 세션이 없습니다."
@@ -1145,7 +1136,7 @@ Announce: `[Synod] {SESSION_ID} 세션을 단계 {N}부터 재개합니다`
 
 ## Session Cleanup
 
-Sessions are preserved in `${SYNOD_BASE}` for:
+Sessions are preserved in `.omc/synod` for:
 - Debugging and auditing
 - Resume capability
 - Learning from past deliberations
@@ -1153,29 +1144,27 @@ Sessions are preserved in `${SYNOD_BASE}` for:
 To clean old sessions:
 ```bash
 # Remove sessions older than 7 days
-SYNOD_BASE="${SYNOD_SESSION_DIR:-${HOME}/.synod/sessions}"
-find ${SYNOD_BASE} -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
+find .omc/synod -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
 ```
 
 ---
 
-## Prerequisites: CLI Tool Temperature Support
+## Prerequisites: CLI Tool Support
 
 ### Gemini CLI (`gemini-3`)
-Temperature 플래그 지원:
+필수 플래그:
 ```bash
-gemini-3 --model flash --thinking high --temperature 0.7 < prompt.txt
+gemini-3 --model flash --thinking high --timeout 110 < prompt.txt
 ```
 
 ### OpenAI CLI (`openai-cli`)
-- **gpt4o**: Temperature 플래그 지원
-  ```bash
-  openai-cli --model gpt4o --temperature 0.7 < prompt.txt
-  ```
-- **o3**: Temperature 조정 불가 (고정 1.0)
+- **o3**: Reasoning effort 제어
   ```bash
   openai-cli --model o3 --reasoning high < prompt.txt
-  # NOTE: --temperature flag is NOT supported for o3
+  ```
+- **gpt4o**: 일반 chat 모델
+  ```bash
+  openai-cli --model gpt4o < prompt.txt
   ```
 
 ---
