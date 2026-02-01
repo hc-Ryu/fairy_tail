@@ -10,14 +10,16 @@ Usage:
 Models: sonnet (default), opus, haiku
 Thinking: none (default), low, medium, high
 """
-import sys
-import os
+
 import argparse
+import os
+import sys
 import time
-from typing import Optional
 
 # Suppress warnings
 import warnings
+from typing import Optional
+
 warnings.filterwarnings("ignore")
 
 try:
@@ -28,47 +30,44 @@ except ImportError:
 
 # Model mapping
 MODEL_MAP = {
-    'sonnet': 'claude-sonnet-4-5-20250929',
-    'opus': 'claude-opus-4-5-20251101',
-    'haiku': 'claude-haiku-4-5-20251001',
+    "sonnet": "claude-sonnet-4-5-20250929",
+    "opus": "claude-opus-4-5-20251101",
+    "haiku": "claude-haiku-4-5-20251001",
 }
 
 # Extended Thinking budget mapping (tokens)
 THINKING_MAP = {
-    'none': None,  # Extended thinking disabled
-    'low': 1024,
-    'medium': 2048,
-    'high': 4096,
+    "none": None,  # Extended thinking disabled
+    "low": 1024,
+    "medium": 2048,
+    "high": 4096,
 }
 
 # Timeout settings (seconds)
 BASE_TIMEOUT = {
-    'haiku': 60,
-    'sonnet': 90,
-    'opus': 120,
+    "haiku": 60,
+    "sonnet": 90,
+    "opus": 120,
 }
 
 THINKING_TIMEOUT_BONUS = {
-    'haiku': 60,
-    'sonnet': 60,
-    'opus': 90,
+    "haiku": 60,
+    "sonnet": 60,
+    "opus": 90,
 }
 
 
 def get_timeout(model: str, thinking_level: str) -> float:
     """Calculate timeout based on model and thinking level."""
     base = BASE_TIMEOUT.get(model, 90)
-    if thinking_level != 'none':
+    if thinking_level != "none":
         base += THINKING_TIMEOUT_BONUS.get(model, 60)
     return float(base)
 
 
 def create_client(api_key: str, timeout: float) -> anthropic.Anthropic:
     """Create Anthropic client with timeout."""
-    return anthropic.Anthropic(
-        api_key=api_key,
-        timeout=timeout
-    )
+    return anthropic.Anthropic(api_key=api_key, timeout=timeout)
 
 
 def generate_with_retry(
@@ -79,7 +78,7 @@ def generate_with_retry(
     use_streaming: bool,
     max_tokens: int = 4096,
     max_retries: int = 3,
-    temperature: float = 1.0
+    temperature: float = 1.0,
 ) -> str:
     """Generate content with retry on rate limit."""
 
@@ -98,10 +97,7 @@ def generate_with_retry(
 
             # Add Extended Thinking if enabled
             if thinking_budget is not None:
-                kwargs["thinking"] = {
-                    "type": "enabled",
-                    "budget_tokens": thinking_budget
-                }
+                kwargs["thinking"] = {"type": "enabled", "budget_tokens": thinking_budget}
 
             if use_streaming:
                 # Streaming mode
@@ -122,28 +118,34 @@ def generate_with_retry(
                         text_parts.append(block.text)
                 return "\n".join(text_parts)
 
-        except anthropic.RateLimitError as e:
+        except anthropic.RateLimitError:
             wait_time = 2 ** (attempt + 2)
-            print(f"[Retry {attempt+1}/{max_retries}] Rate limited - waiting {wait_time}s", file=sys.stderr)
+            print(
+                f"[Retry {attempt + 1}/{max_retries}] Rate limited - waiting {wait_time}s",
+                file=sys.stderr,
+            )
             time.sleep(wait_time)
             continue
 
         except anthropic.APITimeoutError as e:
-            print(f"[Retry {attempt+1}/{max_retries}] Timeout: {e}", file=sys.stderr)
+            print(f"[Retry {attempt + 1}/{max_retries}] Timeout: {e}", file=sys.stderr)
             if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
                 continue
             else:
-                print(f"Error: Max retries exceeded due to timeout", file=sys.stderr)
+                print("Error: Max retries exceeded due to timeout", file=sys.stderr)
                 sys.exit(1)
 
         except anthropic.APIError as e:
             error_str = str(e).lower()
-            is_retryable = any(x in error_str for x in ['503', 'overloaded', 'unavailable'])
+            is_retryable = any(x in error_str for x in ["503", "overloaded", "unavailable"])
 
             if is_retryable and attempt < max_retries - 1:
-                wait_time = 2 ** attempt
-                print(f"[Retry {attempt+1}/{max_retries}] API error - waiting {wait_time}s: {e}", file=sys.stderr)
+                wait_time = 2**attempt
+                print(
+                    f"[Retry {attempt + 1}/{max_retries}] API error - waiting {wait_time}s: {e}",
+                    file=sys.stderr,
+                )
                 time.sleep(wait_time)
                 continue
             else:
@@ -160,7 +162,7 @@ def generate_with_retry(
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Anthropic Claude CLI with Extended Thinking',
+        description="Anthropic Claude CLI with Extended Thinking",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -168,25 +170,39 @@ Examples:
   claude-cli "Explain quantum computing"
   claude-cli --model opus --thinking high "Complex analysis"
   claude-cli --no-stream "Quick response"
-        """
+        """,
     )
-    parser.add_argument('prompt', nargs='?', default=None, help='Prompt text')
-    parser.add_argument('-m', '--model', choices=['sonnet', 'opus', 'haiku'],
-                        default='sonnet', help='Model to use (default: sonnet)')
-    parser.add_argument('-t', '--thinking', choices=['none', 'low', 'medium', 'high'],
-                        default='none', help='Extended Thinking level (default: none)')
-    parser.add_argument('--timeout', type=float, default=None,
-                        help='Timeout in seconds (default: auto-calculated)')
-    parser.add_argument('--max-tokens', type=int, default=4096,
-                        help='Max tokens in response (default: 4096)')
-    parser.add_argument('--no-stream', action='store_true',
-                        help='Disable streaming (not recommended for long responses)')
-    parser.add_argument('--retries', type=int, default=3,
-                        help='Max retries (default: 3)')
-    parser.add_argument('--temperature', type=float, default=1.0,
-                        help='Temperature for generation (default: 1.0)')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='Verbose output')
+    parser.add_argument("prompt", nargs="?", default=None, help="Prompt text")
+    parser.add_argument(
+        "-m",
+        "--model",
+        choices=["sonnet", "opus", "haiku"],
+        default="sonnet",
+        help="Model to use (default: sonnet)",
+    )
+    parser.add_argument(
+        "-t",
+        "--thinking",
+        choices=["none", "low", "medium", "high"],
+        default="none",
+        help="Extended Thinking level (default: none)",
+    )
+    parser.add_argument(
+        "--timeout", type=float, default=None, help="Timeout in seconds (default: auto-calculated)"
+    )
+    parser.add_argument(
+        "--max-tokens", type=int, default=4096, help="Max tokens in response (default: 4096)"
+    )
+    parser.add_argument(
+        "--no-stream",
+        action="store_true",
+        help="Disable streaming (not recommended for long responses)",
+    )
+    parser.add_argument("--retries", type=int, default=3, help="Max retries (default: 3)")
+    parser.add_argument(
+        "--temperature", type=float, default=1.0, help="Temperature for generation (default: 1.0)"
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 
     args, remaining = parser.parse_known_args()
 
@@ -226,7 +242,12 @@ Examples:
 
     if args.verbose:
         print(f"Model: {model_name}", file=sys.stderr)
-        print(f"Thinking: {args.thinking} ({thinking_budget} tokens)" if thinking_budget else f"Thinking: disabled", file=sys.stderr)
+        print(
+            f"Thinking: {args.thinking} ({thinking_budget} tokens)"
+            if thinking_budget
+            else "Thinking: disabled",
+            file=sys.stderr,
+        )
         print(f"Streaming: {not args.no_stream}", file=sys.stderr)
         print(f"Timeout: {timeout}s", file=sys.stderr)
         print(f"Max tokens: {args.max_tokens}", file=sys.stderr)
@@ -240,7 +261,7 @@ Examples:
         use_streaming=not args.no_stream,
         max_tokens=args.max_tokens,
         max_retries=args.retries,
-        temperature=args.temperature
+        temperature=args.temperature,
     )
 
     if not args.no_stream:
@@ -250,5 +271,5 @@ Examples:
         print(response)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

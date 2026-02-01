@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """Analysis and reporting for Synod benchmark results"""
 
-import json
 import argparse
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from datetime import datetime
+import json
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import numpy as np
+from evaluator import StatisticalAnalyzer
 from rich.console import Console
 from rich.table import Table
-
-from evaluator import StatisticalAnalyzer, CostAnalyzer, EvaluationMetrics
 
 
 @dataclass
@@ -35,18 +34,14 @@ class BenchmarkAnalyzer:
         self.console = Console()
         self.analyzer = StatisticalAnalyzer()
 
-    def load_results(self, filename: str) -> Dict[str, Any]:
+    def load_results(self, filename: str) -> dict[str, Any]:
         """Load results from JSON file"""
         path = self.results_dir / filename
         with open(path) as f:
             return json.load(f)
 
     def compare_methods(
-        self,
-        results_a: List[bool],
-        results_b: List[bool],
-        name_a: str,
-        name_b: str
+        self, results_a: list[bool], results_b: list[bool], name_a: str, name_b: str
     ) -> ComparisonResult:
         """Compare two methods statistically"""
         acc_a = sum(results_a) / len(results_a)
@@ -62,10 +57,10 @@ class BenchmarkAnalyzer:
             difference=acc_b - acc_a,
             chi2=chi2,
             p_value=p_value,
-            significant=p_value < 0.05
+            significant=p_value < 0.05,
         )
 
-    def generate_summary_table(self, all_results: Dict[str, List[Dict]]) -> Table:
+    def generate_summary_table(self, all_results: dict[str, list[dict]]) -> Table:
         """Generate rich table comparing all methods"""
         table = Table(title="Benchmark Results Summary")
 
@@ -85,32 +80,30 @@ class BenchmarkAnalyzer:
 
             table.add_row(
                 method,
-                f"{metrics.accuracy*100:.1f}%",
-                f"[{metrics.ci_lower*100:.1f}%, {metrics.ci_upper*100:.1f}%]",
+                f"{metrics.accuracy * 100:.1f}%",
+                f"[{metrics.ci_lower * 100:.1f}%, {metrics.ci_upper * 100:.1f}%]",
                 f"{metrics.correct_count}/{metrics.total_count}",
                 f"${avg_cost:.4f}",
-                f"{avg_time:.1f}s"
+                f"{avg_time:.1f}s",
             )
 
         return table
 
     def generate_markdown_report(
-        self,
-        all_results: Dict[str, List[Dict]],
-        benchmark_name: str = "GSM8K"
+        self, all_results: dict[str, list[dict]], benchmark_name: str = "GSM8K"
     ) -> str:
         """Generate markdown report"""
 
         lines = [
-            f"# Synod v3.0 Benchmark Report",
-            f"",
+            "# Synod v3.0 Benchmark Report",
+            "",
             f"**Benchmark**: {benchmark_name}",
             f"**Date**: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            f"",
-            f"## Summary",
-            f"",
-            f"| Method | Accuracy | 95% CI | Cost/Question |",
-            f"|--------|----------|--------|---------------|",
+            "",
+            "## Summary",
+            "",
+            "| Method | Accuracy | 95% CI | Cost/Question |",
+            "|--------|----------|--------|---------------|",
         ]
 
         method_metrics = {}
@@ -122,19 +115,21 @@ class BenchmarkAnalyzer:
             method_metrics[method] = (metrics, is_correct)
 
             lines.append(
-                f"| {method} | {metrics.accuracy*100:.1f}% | "
-                f"[{metrics.ci_lower*100:.1f}%, {metrics.ci_upper*100:.1f}%] | "
+                f"| {method} | {metrics.accuracy * 100:.1f}% | "
+                f"[{metrics.ci_lower * 100:.1f}%, {metrics.ci_upper * 100:.1f}%] | "
                 f"${avg_cost:.4f} |"
             )
 
         # Statistical comparisons
-        lines.extend([
-            f"",
-            f"## Statistical Comparisons (McNemar Test)",
-            f"",
-            f"| Comparison | Δ Accuracy | χ² | p-value | Significant? |",
-            f"|------------|------------|-----|---------|--------------|",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Statistical Comparisons (McNemar Test)",
+                "",
+                "| Comparison | Δ Accuracy | χ² | p-value | Significant? |",
+                "|------------|------------|-----|---------|--------------|",
+            ]
+        )
 
         methods = list(all_results.keys())
         if "synod" in [m.lower() for m in methods]:
@@ -144,15 +139,12 @@ class BenchmarkAnalyzer:
             for method in methods:
                 if method != synod_key:
                     comparison = self.compare_methods(
-                        method_metrics[method][1],
-                        synod_correct,
-                        method,
-                        synod_key
+                        method_metrics[method][1], synod_correct, method, synod_key
                     )
                     sig_marker = "✓" if comparison.significant else "✗"
                     lines.append(
                         f"| {method} vs {synod_key} | "
-                        f"{comparison.difference*100:+.1f}% | "
+                        f"{comparison.difference * 100:+.1f}% | "
                         f"{comparison.chi2:.2f} | "
                         f"{comparison.p_value:.4f} | "
                         f"{sig_marker} |"
@@ -162,32 +154,38 @@ class BenchmarkAnalyzer:
         total_questions = len(list(all_results.values())[0])
         synod_cost = np.mean([r.get("cost_usd", 0) for r in all_results.get("synod", [])])
 
-        lines.extend([
-            f"",
-            f"## Cost Analysis",
-            f"",
-            f"- **Questions evaluated**: {total_questions}",
-            f"- **Synod cost/question**: ${synod_cost:.4f}",
-            f"- **Projected Phase 1 cost** (300 questions): ${synod_cost * 300:.2f}",
-            f"- **Projected Phase 2 cost** (800 questions): ${synod_cost * 800:.2f}",
-            f"",
-            f"## Conclusion",
-            f"",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Cost Analysis",
+                "",
+                f"- **Questions evaluated**: {total_questions}",
+                f"- **Synod cost/question**: ${synod_cost:.4f}",
+                f"- **Projected Phase 1 cost** (300 questions): ${synod_cost * 300:.2f}",
+                f"- **Projected Phase 2 cost** (800 questions): ${synod_cost * 800:.2f}",
+                "",
+                "## Conclusion",
+                "",
+            ]
+        )
 
         # Auto-generate conclusion
         if "synod" in [m.lower() for m in methods]:
             synod_acc = method_metrics[synod_key][0].accuracy
             best_baseline = max(
                 [(m, method_metrics[m][0].accuracy) for m in methods if m != synod_key],
-                key=lambda x: x[1]
+                key=lambda x: x[1],
             )
             diff = (synod_acc - best_baseline[1]) * 100
 
             if diff > 2:
-                lines.append(f"Synod outperforms the best baseline ({best_baseline[0]}) by **{diff:.1f}%**.")
+                lines.append(
+                    f"Synod outperforms the best baseline ({best_baseline[0]}) by **{diff:.1f}%**."
+                )
             elif diff > 0:
-                lines.append(f"Synod shows marginal improvement over {best_baseline[0]} (+{diff:.1f}%).")
+                lines.append(
+                    f"Synod shows marginal improvement over {best_baseline[0]} (+{diff:.1f}%)."
+                )
             else:
                 lines.append(f"Synod does not outperform {best_baseline[0]} ({diff:.1f}%).")
 

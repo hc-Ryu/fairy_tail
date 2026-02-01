@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """Baseline implementations for Synod benchmark comparison"""
 
+import json
 import os
 import time
-from typing import Optional, List, Tuple
-from dataclasses import dataclass
 from collections import Counter
-import subprocess
-import json
+from dataclasses import dataclass
+from typing import Optional
 
+import google.generativeai as genai
 from anthropic import Anthropic
 from openai import OpenAI
-import google.generativeai as genai
 
 
 @dataclass
@@ -37,19 +36,20 @@ class BaselineRunner:
     def _extract_answer(self, response: str) -> Optional[str]:
         """Extract numeric answer from response"""
         import re
+
         patterns = [
-            r'####\s*(-?\d+(?:,\d+)*(?:\.\d+)?)',
-            r'(?:answer|답|정답)[:\s]*(-?\d+(?:,\d+)*(?:\.\d+)?)',
-            r'(?:therefore|thus|따라서|그러므로)[,\s]*.*?(-?\d+(?:,\d+)*(?:\.\d+)?)',
-            r'\*\*(-?\d+(?:,\d+)*(?:\.\d+)?)\*\*',
+            r"####\s*(-?\d+(?:,\d+)*(?:\.\d+)?)",
+            r"(?:answer|답|정답)[:\s]*(-?\d+(?:,\d+)*(?:\.\d+)?)",
+            r"(?:therefore|thus|따라서|그러므로)[,\s]*.*?(-?\d+(?:,\d+)*(?:\.\d+)?)",
+            r"\*\*(-?\d+(?:,\d+)*(?:\.\d+)?)\*\*",
         ]
 
         for pattern in patterns:
             matches = re.findall(pattern, response, re.IGNORECASE)
             if matches:
-                return matches[-1].replace(',', '')
+                return matches[-1].replace(",", "")
 
-        numbers = re.findall(r'(?<!\d)(-?\d+(?:\.\d+)?)(?!\d)', response)
+        numbers = re.findall(r"(?<!\d)(-?\d+(?:\.\d+)?)(?!\d)", response)
         return numbers[-1] if numbers else None
 
     def run_claude_only(self, question: str) -> BaselineResult:
@@ -59,10 +59,12 @@ class BaselineRunner:
             response = self.anthropic.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=1024,
-                messages=[{
-                    "role": "user",
-                    "content": f"Solve this math problem step by step. End with #### followed by the numeric answer.\n\n{question}"
-                }]
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Solve this math problem step by step. End with #### followed by the numeric answer.\n\n{question}",
+                    }
+                ],
             )
             text = response.content[0].text
             tokens = response.usage.input_tokens + response.usage.output_tokens
@@ -75,7 +77,7 @@ class BaselineRunner:
                 extracted_answer=self._extract_answer(text),
                 elapsed_seconds=time.time() - start,
                 tokens_used=tokens,
-                cost_usd=cost
+                cost_usd=cost,
             )
         except Exception as e:
             return BaselineResult(
@@ -85,7 +87,7 @@ class BaselineRunner:
                 elapsed_seconds=time.time() - start,
                 tokens_used=0,
                 cost_usd=0,
-                error=str(e)
+                error=str(e),
             )
 
     def run_gpt4o_only(self, question: str) -> BaselineResult:
@@ -95,15 +97,19 @@ class BaselineRunner:
             response = self.openai.chat.completions.create(
                 model="gpt-4o",
                 max_tokens=1024,
-                messages=[{
-                    "role": "user",
-                    "content": f"Solve this math problem step by step. End with #### followed by the numeric answer.\n\n{question}"
-                }]
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Solve this math problem step by step. End with #### followed by the numeric answer.\n\n{question}",
+                    }
+                ],
             )
             text = response.choices[0].message.content
             tokens = response.usage.total_tokens
             # GPT-4o pricing: $2.5/$10 per 1M tokens
-            cost = (response.usage.prompt_tokens * 2.5 + response.usage.completion_tokens * 10) / 1_000_000
+            cost = (
+                response.usage.prompt_tokens * 2.5 + response.usage.completion_tokens * 10
+            ) / 1_000_000
 
             return BaselineResult(
                 method="gpt4o_only",
@@ -111,7 +117,7 @@ class BaselineRunner:
                 extracted_answer=self._extract_answer(text),
                 elapsed_seconds=time.time() - start,
                 tokens_used=tokens,
-                cost_usd=cost
+                cost_usd=cost,
             )
         except Exception as e:
             return BaselineResult(
@@ -121,7 +127,7 @@ class BaselineRunner:
                 elapsed_seconds=time.time() - start,
                 tokens_used=0,
                 cost_usd=0,
-                error=str(e)
+                error=str(e),
             )
 
     def run_gemini_only(self, question: str) -> BaselineResult:
@@ -142,7 +148,7 @@ class BaselineRunner:
                 extracted_answer=self._extract_answer(text),
                 elapsed_seconds=time.time() - start,
                 tokens_used=tokens,
-                cost_usd=cost
+                cost_usd=cost,
             )
         except Exception as e:
             return BaselineResult(
@@ -152,7 +158,7 @@ class BaselineRunner:
                 elapsed_seconds=time.time() - start,
                 tokens_used=0,
                 cost_usd=0,
-                error=str(e)
+                error=str(e),
             )
 
     def run_majority_vote(self, question: str) -> BaselineResult:
@@ -167,7 +173,7 @@ class BaselineRunner:
         answers = [
             claude_result.extracted_answer,
             gpt4o_result.extracted_answer,
-            gemini_result.extracted_answer
+            gemini_result.extracted_answer,
         ]
 
         # Filter None values and find majority
@@ -178,7 +184,9 @@ class BaselineRunner:
         else:
             majority_answer = None
 
-        total_tokens = claude_result.tokens_used + gpt4o_result.tokens_used + gemini_result.tokens_used
+        total_tokens = (
+            claude_result.tokens_used + gpt4o_result.tokens_used + gemini_result.tokens_used
+        )
         total_cost = claude_result.cost_usd + gpt4o_result.cost_usd + gemini_result.cost_usd
 
         response_summary = f"""
@@ -194,7 +202,7 @@ Majority: {majority_answer}
             extracted_answer=majority_answer,
             elapsed_seconds=time.time() - start,
             tokens_used=total_tokens,
-            cost_usd=total_cost
+            cost_usd=total_cost,
         )
 
 
@@ -205,7 +213,7 @@ def run_baselines(question: str) -> dict:
     results = {
         "claude_only": runner.run_claude_only(question),
         "gpt4o_only": runner.run_gpt4o_only(question),
-        "majority_vote": runner.run_majority_vote(question)
+        "majority_vote": runner.run_majority_vote(question),
     }
 
     return {k: vars(v) for k, v in results.items()}

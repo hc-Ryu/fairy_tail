@@ -16,15 +16,16 @@ Examples:
   groq-cli "간단한 질문" --model 8b
   groq-cli --prompt "간단한 질문" --model 70b
 """
-import sys
-import os
+
 import argparse
-import time
+import os
 import random
+import sys
+import time
 
 try:
-    from openai import OpenAI
     import httpx
+    from openai import OpenAI
 except ImportError:
     sys.stderr.write("Error: openai 패키지가 설치되지 않았습니다.\n")
     sys.stderr.write("설치: pip install openai\n")
@@ -35,16 +36,16 @@ api_key = os.environ.get("GROQ_API_KEY")
 
 # 모델 매핑
 MODEL_MAP = {
-    '8b': 'llama-3.1-8b-instant',
-    '70b': 'llama-3.1-70b-versatile',
-    'mixtral': 'mixtral-8x7b-32768'
+    "8b": "llama-3.1-8b-instant",
+    "70b": "llama-3.1-70b-versatile",
+    "mixtral": "mixtral-8x7b-32768",
 }
 
 # 모델별 타임아웃 설정 (초) - Groq는 초고속!
 TIMEOUT_CONFIG = {
-    '8b': 30,
-    '70b': 45,
-    'mixtral': 60,
+    "8b": 30,
+    "70b": 45,
+    "mixtral": 60,
 }
 
 
@@ -53,16 +54,11 @@ def create_client(timeout_sec: int) -> OpenAI:
     return OpenAI(
         api_key=api_key.strip(),
         base_url="https://api.groq.com/openai/v1",
-        timeout=httpx.Timeout(timeout_sec, connect=10.0)
+        timeout=httpx.Timeout(timeout_sec, connect=10.0),
     )
 
 
-def generate_with_retry(
-    model: str,
-    prompt: str,
-    timeout: int,
-    max_retries: int = 3
-) -> str:
+def generate_with_retry(model: str, prompt: str, timeout: int, max_retries: int = 3) -> str:
     """Generate content with retry on timeout and rate limits."""
 
     for attempt in range(max_retries):
@@ -76,7 +72,7 @@ def generate_with_retry(
             request_params = {
                 "model": model_name,
                 "messages": [{"role": "user", "content": prompt}],
-                "stream": True  # Groq는 스트리밍이 더 빠름
+                "stream": True,  # Groq는 스트리밍이 더 빠름
             }
 
             # Generate response with streaming
@@ -86,7 +82,7 @@ def generate_with_retry(
             for chunk in response:
                 if chunk.choices and chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
-                    print(content, end='', flush=True)
+                    print(content, end="", flush=True)
                     full_response += content
 
             print()  # 마지막 줄바꿈
@@ -101,20 +97,26 @@ def generate_with_retry(
             error_type = type(e).__name__
 
             # Check for retryable errors
-            is_timeout = any(x in error_str for x in ['timeout', 'timed out', 'deadline'])
-            is_rate_limit = any(x in error_str for x in ['429', 'rate', 'quota'])
-            is_overloaded = any(x in error_str for x in ['503', 'overloaded', 'unavailable', '502'])
+            is_timeout = any(x in error_str for x in ["timeout", "timed out", "deadline"])
+            is_rate_limit = any(x in error_str for x in ["429", "rate", "quota"])
+            is_overloaded = any(x in error_str for x in ["503", "overloaded", "unavailable", "502"])
 
             if is_timeout or is_overloaded:
-                print(f"[Retry {attempt+1}/{max_retries}] {error_type}: Retrying...", file=sys.stderr)
+                print(
+                    f"[Retry {attempt + 1}/{max_retries}] {error_type}: Retrying...",
+                    file=sys.stderr,
+                )
                 # Exponential backoff with jitter
-                wait_time = (2 ** attempt) + random.random()
+                wait_time = (2**attempt) + random.random()
                 time.sleep(wait_time)
                 continue
 
             elif is_rate_limit:
                 wait_time = (2 ** (attempt + 2)) + random.random()
-                print(f"[Retry {attempt+1}/{max_retries}] Rate limited - waiting {wait_time:.1f}s", file=sys.stderr)
+                print(
+                    f"[Retry {attempt + 1}/{max_retries}] Rate limited - waiting {wait_time:.1f}s",
+                    file=sys.stderr,
+                )
                 time.sleep(wait_time)
                 continue
             else:
@@ -128,7 +130,7 @@ def generate_with_retry(
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Groq CLI with dynamic model selection',
+        description="Groq CLI with dynamic model selection",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Models:
@@ -140,20 +142,33 @@ Groq 특징:
   - 초고속 추론 (세계 최고 속도)
   - OpenAI 호환 API
   - 무료 티어 제공
-        """
+        """,
     )
-    parser.add_argument('positional_prompt', nargs='?', default=None, metavar='prompt',
-                        help='프롬프트 (positional argument)')
-    parser.add_argument('--prompt', '-p', default=None,
-                        help='프롬프트 (--prompt 옵션으로도 전달 가능)')
-    parser.add_argument('--model', '-m', choices=['8b', '70b', 'mixtral'], default='8b',
-                        help='사용할 모델 (기본값: 8b)')
-    parser.add_argument('--timeout', type=int, default=None,
-                        help='타임아웃(초) - 기본값은 모델에 따라 자동 설정 (8b:30s, 70b:45s, mixtral:60s)')
-    parser.add_argument('--retries', type=int, default=3,
-                        help='최대 재시도 횟수 (기본값: 3)')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='상세 출력')
+    parser.add_argument(
+        "positional_prompt",
+        nargs="?",
+        default=None,
+        metavar="prompt",
+        help="프롬프트 (positional argument)",
+    )
+    parser.add_argument(
+        "--prompt", "-p", default=None, help="프롬프트 (--prompt 옵션으로도 전달 가능)"
+    )
+    parser.add_argument(
+        "--model",
+        "-m",
+        choices=["8b", "70b", "mixtral"],
+        default="8b",
+        help="사용할 모델 (기본값: 8b)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        help="타임아웃(초) - 기본값은 모델에 따라 자동 설정 (8b:30s, 70b:45s, mixtral:60s)",
+    )
+    parser.add_argument("--retries", type=int, default=3, help="최대 재시도 횟수 (기본값: 3)")
+    parser.add_argument("-v", "--verbose", action="store_true", help="상세 출력")
 
     args, remaining = parser.parse_known_args()
 
@@ -196,18 +211,14 @@ Groq 특징:
     if args.verbose:
         print(f"Model: {MODEL_MAP[args.model]}", file=sys.stderr)
         print(f"Timeout: {timeout}s", file=sys.stderr)
-        print(f"Base URL: https://api.groq.com/openai/v1", file=sys.stderr)
+        print("Base URL: https://api.groq.com/openai/v1", file=sys.stderr)
 
     # Generate with retry
-    response = generate_with_retry(
-        model=args.model,
-        prompt=prompt,
-        timeout=timeout,
-        max_retries=args.retries
-    )
+    generate_with_retry(model=args.model, prompt=prompt, timeout=timeout, max_retries=args.retries)
 
     # 스트리밍 모드에서는 이미 출력됨
     # print(response)
+
 
 if __name__ == "__main__":
     main()

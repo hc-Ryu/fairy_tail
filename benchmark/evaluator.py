@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Evaluation utilities for Synod benchmark"""
 
-import re
 import json
-from typing import Optional, List, Tuple, Dict, Any
+import re
 from dataclasses import dataclass
-from pathlib import Path
+from typing import Any, Optional
+
 import numpy as np
 from scipy import stats
 
@@ -26,29 +26,29 @@ class GSM8KEvaluator:
     @staticmethod
     def extract_expected_answer(answer_text: str) -> str:
         """Extract numeric answer after #### from GSM8K format"""
-        match = re.search(r'####\s*(-?\d+(?:,\d+)*(?:\.\d+)?)', answer_text)
+        match = re.search(r"####\s*(-?\d+(?:,\d+)*(?:\.\d+)?)", answer_text)
         if match:
-            return match.group(1).replace(',', '')
+            return match.group(1).replace(",", "")
         return ""
 
     @staticmethod
     def extract_model_answer(response: str) -> Optional[str]:
         """Extract numeric answer from model response"""
         patterns = [
-            r'####\s*(-?\d+(?:,\d+)*(?:\.\d+)?)',
-            r'(?:answer|답|정답|Answer)[:\s]*(-?\d+(?:,\d+)*(?:\.\d+)?)',
-            r'(?:therefore|thus|so|따라서|그러므로|Hence)[,\s]*.*?(\d+(?:,\d+)*(?:\.\d+)?)',
-            r'\*\*(-?\d+(?:,\d+)*(?:\.\d+)?)\*\*',
-            r'(?:=|equals?)[:\s]*(-?\d+(?:,\d+)*(?:\.\d+)?)',
+            r"####\s*(-?\d+(?:,\d+)*(?:\.\d+)?)",
+            r"(?:answer|답|정답|Answer)[:\s]*(-?\d+(?:,\d+)*(?:\.\d+)?)",
+            r"(?:therefore|thus|so|따라서|그러므로|Hence)[,\s]*.*?(\d+(?:,\d+)*(?:\.\d+)?)",
+            r"\*\*(-?\d+(?:,\d+)*(?:\.\d+)?)\*\*",
+            r"(?:=|equals?)[:\s]*(-?\d+(?:,\d+)*(?:\.\d+)?)",
         ]
 
         for pattern in patterns:
             matches = re.findall(pattern, response, re.IGNORECASE)
             if matches:
-                return matches[-1].replace(',', '')
+                return matches[-1].replace(",", "")
 
         # Fallback: last number in response
-        numbers = re.findall(r'(?<!\d)(-?\d+(?:\.\d+)?)(?!\d)', response)
+        numbers = re.findall(r"(?<!\d)(-?\d+(?:\.\d+)?)(?!\d)", response)
         return numbers[-1] if numbers else None
 
     @staticmethod
@@ -69,23 +69,23 @@ class TruthfulQAEvaluator:
     """Evaluator for TruthfulQA benchmark"""
 
     @staticmethod
-    def evaluate_mc1(response: str, correct_idx: int, options: List[str]) -> bool:
+    def evaluate_mc1(response: str, correct_idx: int, options: list[str]) -> bool:
         """Evaluate MC1 (single correct answer) format"""
         # Extract letter choice (A, B, C, D)
-        match = re.search(r'\b([A-D])\b', response.upper())
+        match = re.search(r"\b([A-D])\b", response.upper())
         if match:
-            predicted_idx = ord(match.group(1)) - ord('A')
+            predicted_idx = ord(match.group(1)) - ord("A")
             return predicted_idx == correct_idx
 
         # Fallback: check if correct option text is in response
         return options[correct_idx].lower() in response.lower()
 
     @staticmethod
-    def evaluate_mc2(response: str, correct_indices: List[int], options: List[str]) -> float:
+    def evaluate_mc2(response: str, correct_indices: list[int], options: list[str]) -> float:
         """Evaluate MC2 (multiple correct answers) format"""
         # Extract all letter choices
-        matches = re.findall(r'\b([A-D])\b', response.upper())
-        predicted_indices = [ord(m) - ord('A') for m in matches]
+        matches = re.findall(r"\b([A-D])\b", response.upper())
+        predicted_indices = [ord(m) - ord("A") for m in matches]
 
         if not predicted_indices:
             return 0.0
@@ -112,8 +112,7 @@ class StatisticalAnalyzer:
 
     @staticmethod
     def calculate_accuracy_with_ci(
-        results: List[bool],
-        confidence: float = 0.95
+        results: list[bool], confidence: float = 0.95
     ) -> EvaluationMetrics:
         """Calculate accuracy with confidence interval"""
         n = len(results)
@@ -126,8 +125,8 @@ class StatisticalAnalyzer:
         # Wilson score interval (better for small samples)
         z = stats.norm.ppf((1 + confidence) / 2)
         denominator = 1 + z**2 / n
-        center = (accuracy + z**2 / (2*n)) / denominator
-        margin = z * np.sqrt((accuracy * (1 - accuracy) + z**2 / (4*n)) / n) / denominator
+        center = (accuracy + z**2 / (2 * n)) / denominator
+        margin = z * np.sqrt((accuracy * (1 - accuracy) + z**2 / (4 * n)) / n) / denominator
 
         return EvaluationMetrics(
             accuracy=accuracy,
@@ -135,14 +134,11 @@ class StatisticalAnalyzer:
             ci_upper=min(1, center + margin),
             correct_count=correct,
             total_count=n,
-            error_count=n - correct
+            error_count=n - correct,
         )
 
     @staticmethod
-    def mcnemar_test(
-        results_a: List[bool],
-        results_b: List[bool]
-    ) -> Tuple[float, float]:
+    def mcnemar_test(results_a: list[bool], results_b: list[bool]) -> tuple[float, float]:
         """
         McNemar's test for paired nominal data.
         Returns (chi2 statistic, p-value)
@@ -159,17 +155,15 @@ class StatisticalAnalyzer:
             return 0.0, 1.0  # No difference
 
         # McNemar's test with continuity correction
-        chi2 = (abs(b - c) - 1)**2 / (b + c)
+        chi2 = (abs(b - c) - 1) ** 2 / (b + c)
         p_value = 1 - stats.chi2.cdf(chi2, df=1)
 
         return chi2, p_value
 
     @staticmethod
     def bootstrap_ci(
-        results: List[bool],
-        n_bootstrap: int = 10000,
-        confidence: float = 0.95
-    ) -> Tuple[float, float]:
+        results: list[bool], n_bootstrap: int = 10000, confidence: float = 0.95
+    ) -> tuple[float, float]:
         """Bootstrap confidence interval for accuracy"""
         results = np.array(results)
         n = len(results)
@@ -200,11 +194,7 @@ class CostAnalyzer:
     }
 
     @staticmethod
-    def calculate_cost(
-        model: str,
-        input_tokens: int,
-        output_tokens: int
-    ) -> float:
+    def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
         """Calculate cost in USD"""
         if model not in CostAnalyzer.PRICING:
             return 0.0
@@ -213,7 +203,7 @@ class CostAnalyzer:
         return (input_tokens * input_price + output_tokens * output_price) / 1_000_000
 
     @staticmethod
-    def summarize_costs(results: List[Dict[str, Any]]) -> Dict[str, float]:
+    def summarize_costs(results: list[dict[str, Any]]) -> dict[str, float]:
         """Summarize costs from benchmark results"""
         total_cost = sum(r.get("cost_usd", 0) for r in results)
         total_questions = len(results)
@@ -221,12 +211,16 @@ class CostAnalyzer:
         return {
             "total_cost_usd": total_cost,
             "avg_cost_per_question": total_cost / total_questions if total_questions > 0 else 0,
-            "estimated_phase1_cost": total_cost / total_questions * 300 if total_questions > 0 else 0,
-            "estimated_phase2_cost": total_cost / total_questions * 800 if total_questions > 0 else 0,
+            "estimated_phase1_cost": total_cost / total_questions * 300
+            if total_questions > 0
+            else 0,
+            "estimated_phase2_cost": total_cost / total_questions * 800
+            if total_questions > 0
+            else 0,
         }
 
 
-def evaluate_benchmark_results(results_path: str) -> Dict[str, Any]:
+def evaluate_benchmark_results(results_path: str) -> dict[str, Any]:
     """Evaluate benchmark results from JSON file"""
     with open(results_path) as f:
         data = json.load(f)
@@ -249,12 +243,13 @@ def evaluate_benchmark_results(results_path: str) -> Dict[str, Any]:
         "correct": metrics.correct_count,
         "total": metrics.total_count,
         "errors": metrics.error_count,
-        "costs": cost_summary
+        "costs": cost_summary,
     }
 
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("results_file", help="Path to results JSON")
     args = parser.parse_args()

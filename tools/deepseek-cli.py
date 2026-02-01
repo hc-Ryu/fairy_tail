@@ -16,15 +16,16 @@ Examples:
   deepseek-cli "간단한 질문" --model chat
   deepseek-cli --prompt "간단한 질문" --model chat
 """
-import sys
-import os
+
 import argparse
-import time
+import os
 import random
+import sys
+import time
 
 try:
-    from openai import OpenAI
     import httpx
+    from openai import OpenAI
 except ImportError:
     sys.stderr.write("Error: openai 패키지가 설치되지 않았습니다.\n")
     sys.stderr.write("설치: pip install openai\n")
@@ -34,26 +35,23 @@ except ImportError:
 api_key = os.environ.get("DEEPSEEK_API_KEY")
 
 # 모델 매핑
-MODEL_MAP = {
-    'chat': 'deepseek-chat',
-    'reasoner': 'deepseek-reasoner'
-}
+MODEL_MAP = {"chat": "deepseek-chat", "reasoner": "deepseek-reasoner"}
 
 # Reasoning Effort는 reasoner 모델에서만 작동
-REASONER_MODELS = ['reasoner']
+REASONER_MODELS = ["reasoner"]
 
 # 모델별 타임아웃 설정 (초)
 TIMEOUT_CONFIG = {
-    ('chat', 'low'): 60,
-    ('chat', 'medium'): 60,
-    ('chat', 'high'): 120,
-    ('reasoner', 'low'): 180,
-    ('reasoner', 'medium'): 300,
-    ('reasoner', 'high'): 600,
+    ("chat", "low"): 60,
+    ("chat", "medium"): 60,
+    ("chat", "high"): 120,
+    ("reasoner", "low"): 180,
+    ("reasoner", "medium"): 300,
+    ("reasoner", "high"): 600,
 }
 
 # Reasoning 레벨 (다운그레이드용)
-REASONING_LEVELS = ['high', 'medium', 'low']
+REASONING_LEVELS = ["high", "medium", "low"]
 
 
 def create_client(timeout_sec: int) -> OpenAI:
@@ -61,7 +59,7 @@ def create_client(timeout_sec: int) -> OpenAI:
     return OpenAI(
         api_key=api_key.strip(),
         base_url="https://api.deepseek.com",
-        timeout=httpx.Timeout(timeout_sec, connect=10.0)
+        timeout=httpx.Timeout(timeout_sec, connect=10.0),
     )
 
 
@@ -71,12 +69,14 @@ def generate_with_retry(
     reasoning: str,
     timeout: int,
     max_retries: int = 3,
-    adaptive: bool = True
+    adaptive: bool = True,
 ) -> str:
     """Generate content with adaptive retry on timeout."""
 
     current_reasoning = reasoning
-    current_idx = REASONING_LEVELS.index(current_reasoning) if current_reasoning in REASONING_LEVELS else 1
+    current_idx = (
+        REASONING_LEVELS.index(current_reasoning) if current_reasoning in REASONING_LEVELS else 1
+    )
 
     for attempt in range(max_retries):
         try:
@@ -88,7 +88,7 @@ def generate_with_retry(
             model_name = MODEL_MAP[model]
             request_params = {
                 "model": model_name,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": [{"role": "user", "content": prompt}],
             }
 
             # Add reasoning_effort for reasoner model
@@ -122,27 +122,40 @@ def generate_with_retry(
             error_type = type(e).__name__
 
             # Check for retryable errors
-            is_timeout = any(x in error_str for x in ['timeout', 'timed out', 'deadline'])
-            is_rate_limit = any(x in error_str for x in ['429', 'rate', 'quota'])
-            is_overloaded = any(x in error_str for x in ['503', 'overloaded', 'unavailable', '502'])
+            is_timeout = any(x in error_str for x in ["timeout", "timed out", "deadline"])
+            is_rate_limit = any(x in error_str for x in ["429", "rate", "quota"])
+            is_overloaded = any(x in error_str for x in ["503", "overloaded", "unavailable", "502"])
 
             if is_timeout or is_overloaded:
-                if adaptive and model in REASONER_MODELS and current_idx < len(REASONING_LEVELS) - 1:
+                if (
+                    adaptive
+                    and model in REASONER_MODELS
+                    and current_idx < len(REASONING_LEVELS) - 1
+                ):
                     # Downgrade reasoning level
                     current_idx += 1
                     current_reasoning = REASONING_LEVELS[current_idx]
-                    print(f"[Retry {attempt+1}/{max_retries}] Timeout - downgrading reasoning to '{current_reasoning}'", file=sys.stderr)
+                    print(
+                        f"[Retry {attempt + 1}/{max_retries}] Timeout - downgrading reasoning to '{current_reasoning}'",
+                        file=sys.stderr,
+                    )
                 else:
-                    print(f"[Retry {attempt+1}/{max_retries}] {error_type}: Retrying...", file=sys.stderr)
+                    print(
+                        f"[Retry {attempt + 1}/{max_retries}] {error_type}: Retrying...",
+                        file=sys.stderr,
+                    )
 
                 # Exponential backoff with jitter
-                wait_time = (2 ** attempt) + random.random()
+                wait_time = (2**attempt) + random.random()
                 time.sleep(wait_time)
                 continue
 
             elif is_rate_limit:
                 wait_time = (2 ** (attempt + 2)) + random.random()
-                print(f"[Retry {attempt+1}/{max_retries}] Rate limited - waiting {wait_time:.1f}s", file=sys.stderr)
+                print(
+                    f"[Retry {attempt + 1}/{max_retries}] Rate limited - waiting {wait_time:.1f}s",
+                    file=sys.stderr,
+                )
                 time.sleep(wait_time)
                 continue
             else:
@@ -156,7 +169,7 @@ def generate_with_retry(
 
 def main():
     parser = argparse.ArgumentParser(
-        description='DeepSeek CLI with dynamic model selection',
+        description="DeepSeek CLI with dynamic model selection",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Models:
@@ -167,24 +180,45 @@ Reasoning Levels (reasoner only):
   low     - 속도 우선, 경제적 (180초)
   medium  - 균형 (기본값, 300초)
   high    - 최대 추론 깊이 (600초)
-        """
+        """,
     )
-    parser.add_argument('positional_prompt', nargs='?', default=None, metavar='prompt',
-                        help='프롬프트 (positional argument)')
-    parser.add_argument('--prompt', '-p', default=None,
-                        help='프롬프트 (--prompt 옵션으로도 전달 가능)')
-    parser.add_argument('--model', '-m', choices=['chat', 'reasoner'], default='chat',
-                        help='사용할 모델 (기본값: chat)')
-    parser.add_argument('--reasoning', '-r', choices=['low', 'medium', 'high'], default='medium',
-                        help='Reasoning 레벨 - reasoner 모델 전용 (기본값: medium)')
-    parser.add_argument('--timeout', type=int, default=120,
-                        help='타임아웃(초) - 기본값은 모델/레벨에 따라 자동 설정')
-    parser.add_argument('--retries', type=int, default=3,
-                        help='최대 재시도 횟수 (기본값: 3)')
-    parser.add_argument('--no-adaptive', action='store_true',
-                        help='적응형 재시도 비활성화 (reasoning 레벨 다운그레이드 안함)')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='상세 출력')
+    parser.add_argument(
+        "positional_prompt",
+        nargs="?",
+        default=None,
+        metavar="prompt",
+        help="프롬프트 (positional argument)",
+    )
+    parser.add_argument(
+        "--prompt", "-p", default=None, help="프롬프트 (--prompt 옵션으로도 전달 가능)"
+    )
+    parser.add_argument(
+        "--model",
+        "-m",
+        choices=["chat", "reasoner"],
+        default="chat",
+        help="사용할 모델 (기본값: chat)",
+    )
+    parser.add_argument(
+        "--reasoning",
+        "-r",
+        choices=["low", "medium", "high"],
+        default="medium",
+        help="Reasoning 레벨 - reasoner 모델 전용 (기본값: medium)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=120,
+        help="타임아웃(초) - 기본값은 모델/레벨에 따라 자동 설정",
+    )
+    parser.add_argument("--retries", type=int, default=3, help="최대 재시도 횟수 (기본값: 3)")
+    parser.add_argument(
+        "--no-adaptive",
+        action="store_true",
+        help="적응형 재시도 비활성화 (reasoning 레벨 다운그레이드 안함)",
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="상세 출력")
 
     args, remaining = parser.parse_known_args()
 
@@ -207,7 +241,9 @@ Reasoning Levels (reasoner only):
             prompt = " ".join(remaining)
 
     if not prompt:
-        sys.stderr.write("Usage: deepseek-cli 'prompt' [--model chat|reasoner] [--reasoning low|medium|high]\n")
+        sys.stderr.write(
+            "Usage: deepseek-cli 'prompt' [--model chat|reasoner] [--reasoning low|medium|high]\n"
+        )
         sys.stderr.write("       deepseek-cli --prompt 'prompt' [options]\n")
         sys.stderr.write("       echo 'prompt' | deepseek-cli [options]\n")
         sys.exit(1)
@@ -224,7 +260,10 @@ Reasoning Levels (reasoner only):
     if args.verbose:
         print(f"Model: {MODEL_MAP[args.model]}", file=sys.stderr)
         print(f"Reasoning: {args.reasoning}", file=sys.stderr)
-        print(f"Timeout: {TIMEOUT_CONFIG.get((args.model, args.reasoning), args.timeout)}s", file=sys.stderr)
+        print(
+            f"Timeout: {TIMEOUT_CONFIG.get((args.model, args.reasoning), args.timeout)}s",
+            file=sys.stderr,
+        )
 
     # Generate with retry
     response = generate_with_retry(
@@ -233,10 +272,11 @@ Reasoning Levels (reasoner only):
         reasoning=args.reasoning,
         timeout=args.timeout,
         max_retries=args.retries,
-        adaptive=not args.no_adaptive
+        adaptive=not args.no_adaptive,
     )
 
     print(response)
+
 
 if __name__ == "__main__":
     main()

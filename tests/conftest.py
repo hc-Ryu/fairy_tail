@@ -1,9 +1,8 @@
 """
 Pytest configuration and shared fixtures for synod-plugin tests.
 """
-import os
+
 import pytest
-from unittest.mock import MagicMock
 
 
 @pytest.fixture
@@ -23,7 +22,7 @@ def mock_openai_api_key(monkeypatch):
 @pytest.fixture
 def sample_valid_response():
     """Sample valid SID response with all required XML tags."""
-    return '''
+    return """
     <confidence score="85">
         <evidence>Strong empirical data supports this conclusion</evidence>
         <logic>The reasoning follows established principles</logic>
@@ -35,7 +34,7 @@ def sample_valid_response():
         2. Secondary consideration
         3. Tertiary aspect
     </semantic_focus>
-    '''
+    """
 
 
 @pytest.fixture
@@ -47,9 +46,9 @@ def sample_invalid_response():
 @pytest.fixture
 def sample_partial_response():
     """Sample response with only confidence tag."""
-    return '''
+    return """
     <confidence score="70">
         <evidence>Some evidence here</evidence>
     </confidence>
     This response is missing semantic_focus tag.
-    '''
+    """

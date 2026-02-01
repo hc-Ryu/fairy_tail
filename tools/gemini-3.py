@@ -10,14 +10,15 @@ Usage:
 Models: flash (default), pro
 Thinking: minimal, low, medium (default), high
 """
-import sys
-import os
+
 import argparse
+import os
+import sys
 import time
-from typing import Optional
 
 # Suppress warnings
 import warnings
+
 warnings.filterwarnings("ignore")
 
 try:
@@ -29,23 +30,23 @@ except ImportError:
 
 # Model mapping
 MODEL_MAP = {
-    'flash': 'gemini-3-flash-preview',
-    'pro': 'gemini-3-pro-preview',
-    '2.5-flash': 'gemini-2.5-flash',
-    '2.5-pro': 'gemini-2.5-pro',
+    "flash": "gemini-3-flash-preview",
+    "pro": "gemini-3-pro-preview",
+    "2.5-flash": "gemini-2.5-flash",
+    "2.5-pro": "gemini-2.5-pro",
 }
 
 # Thinking budget mapping (tokens)
 THINKING_MAP = {
-    'minimal': 50,
-    'low': 200,
-    'medium': 500,
-    'high': 2000,
-    'max': 10000,
+    "minimal": 50,
+    "low": 200,
+    "medium": 500,
+    "high": 2000,
+    "max": 10000,
 }
 
 # Retry levels (progressive downgrade)
-RETRY_LEVELS = ['high', 'medium', 'low', 'minimal']
+RETRY_LEVELS = ["high", "medium", "low", "minimal"]
 
 
 def create_client(timeout_ms: int = 300_000) -> genai.Client:
@@ -55,10 +56,7 @@ def create_client(timeout_ms: int = 300_000) -> genai.Client:
         print("Error: GEMINI_API_KEY environment variable not set", file=sys.stderr)
         sys.exit(1)
 
-    return genai.Client(
-        api_key=api_key,
-        http_options=types.HttpOptions(timeout=timeout_ms)
-    )
+    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms))
 
 
 def generate_with_retry(
@@ -69,7 +67,7 @@ def generate_with_retry(
     use_streaming: bool,
     max_retries: int = 3,
     adaptive: bool = True,
-    temperature: float = 0.7
+    temperature: float = 0.7,
 ) -> str:
     """Generate content with adaptive retry on timeout."""
 
@@ -80,18 +78,14 @@ def generate_with_retry(
         try:
             thinking_budget = THINKING_MAP.get(current_level, 500)
             config = types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(
-                    thinking_budget=thinking_budget
-                ),
-                temperature=temperature
+                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+                temperature=temperature,
             )
 
             if use_streaming:
                 # Streaming mode - prevents timeout for long responses
                 stream = client.models.generate_content_stream(
-                    model=model,
-                    contents=prompt,
-                    config=config
+                    model=model, contents=prompt, config=config
                 )
                 full_response = ""
                 for chunk in stream:
@@ -101,9 +95,7 @@ def generate_with_retry(
             else:
                 # Non-streaming mode
                 response = client.models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config=config
+                    model=model, contents=prompt, config=config
                 )
                 return response.text
 
@@ -112,26 +104,34 @@ def generate_with_retry(
             error_type = type(e).__name__
 
             # Check for retryable errors
-            is_timeout = any(x in error_str for x in ['timeout', '504', 'gateway', 'deadline'])
-            is_rate_limit = any(x in error_str for x in ['429', 'rate', 'quota', 'resource_exhausted'])
-            is_overloaded = any(x in error_str for x in ['503', 'overloaded', 'unavailable'])
+            is_timeout = any(x in error_str for x in ["timeout", "504", "gateway", "deadline"])
+            is_rate_limit = any(
+                x in error_str for x in ["429", "rate", "quota", "resource_exhausted"]
+            )
+            is_overloaded = any(x in error_str for x in ["503", "overloaded", "unavailable"])
 
             if is_timeout or is_overloaded:
                 if adaptive and current_level_idx < len(RETRY_LEVELS) - 1:
                     # Downgrade thinking level
                     current_level_idx += 1
                     current_level = RETRY_LEVELS[current_level_idx]
-                    print(f"[Retry {attempt+1}/{max_retries}] Timeout - downgrading thinking to '{current_level}'", file=sys.stderr)
-                    time.sleep(2 ** attempt)  # Exponential backoff
+                    print(
+                        f"[Retry {attempt + 1}/{max_retries}] Timeout - downgrading thinking to '{current_level}'",
+                        file=sys.stderr,
+                    )
+                    time.sleep(2**attempt)  # Exponential backoff
                     continue
                 else:
-                    print(f"[Retry {attempt+1}/{max_retries}] {error_type}: {e}", file=sys.stderr)
-                    time.sleep(2 ** attempt)
+                    print(f"[Retry {attempt + 1}/{max_retries}] {error_type}: {e}", file=sys.stderr)
+                    time.sleep(2**attempt)
                     continue
 
             elif is_rate_limit:
                 wait_time = 2 ** (attempt + 2)  # Longer backoff for rate limits
-                print(f"[Retry {attempt+1}/{max_retries}] Rate limited - waiting {wait_time}s", file=sys.stderr)
+                print(
+                    f"[Retry {attempt + 1}/{max_retries}] Rate limited - waiting {wait_time}s",
+                    file=sys.stderr,
+                )
                 time.sleep(wait_time)
                 continue
             else:
@@ -145,7 +145,7 @@ def generate_with_retry(
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Gemini 3 CLI with robust error handling',
+        description="Gemini 3 CLI with robust error handling",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -153,25 +153,41 @@ Examples:
   gemini-3 "Explain quantum computing"
   gemini-3 --model pro --thinking high "Complex analysis"
   gemini-3 --no-stream "Quick response"
-        """
+        """,
     )
-    parser.add_argument('prompt', nargs='?', default=None, help='Prompt text')
-    parser.add_argument('-m', '--model', choices=['flash', 'pro', '2.5-flash', '2.5-pro'],
-                        default='flash', help='Model to use (default: flash)')
-    parser.add_argument('-t', '--thinking', choices=['minimal', 'low', 'medium', 'high', 'max'],
-                        default='medium', help='Thinking level (default: medium)')
-    parser.add_argument('--timeout', type=int, default=300,
-                        help='Timeout in seconds (default: 300)')
-    parser.add_argument('--no-stream', action='store_true',
-                        help='Disable streaming (not recommended for long prompts)')
-    parser.add_argument('--no-adaptive', action='store_true',
-                        help='Disable adaptive retry (thinking level downgrade)')
-    parser.add_argument('--retries', type=int, default=3,
-                        help='Max retries (default: 3)')
-    parser.add_argument('--temperature', type=float, default=0.7,
-                        help='Temperature for generation (default: 0.7)')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='Verbose output')
+    parser.add_argument("prompt", nargs="?", default=None, help="Prompt text")
+    parser.add_argument(
+        "-m",
+        "--model",
+        choices=["flash", "pro", "2.5-flash", "2.5-pro"],
+        default="flash",
+        help="Model to use (default: flash)",
+    )
+    parser.add_argument(
+        "-t",
+        "--thinking",
+        choices=["minimal", "low", "medium", "high", "max"],
+        default="medium",
+        help="Thinking level (default: medium)",
+    )
+    parser.add_argument(
+        "--timeout", type=int, default=300, help="Timeout in seconds (default: 300)"
+    )
+    parser.add_argument(
+        "--no-stream",
+        action="store_true",
+        help="Disable streaming (not recommended for long prompts)",
+    )
+    parser.add_argument(
+        "--no-adaptive",
+        action="store_true",
+        help="Disable adaptive retry (thinking level downgrade)",
+    )
+    parser.add_argument("--retries", type=int, default=3, help="Max retries (default: 3)")
+    parser.add_argument(
+        "--temperature", type=float, default=0.7, help="Temperature for generation (default: 0.7)"
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 
     args, remaining = parser.parse_known_args()
 
@@ -195,7 +211,7 @@ Examples:
     client = create_client(timeout_ms)
 
     # Get model name
-    model_name = MODEL_MAP.get(args.model, MODEL_MAP['flash'])
+    model_name = MODEL_MAP.get(args.model, MODEL_MAP["flash"])
 
     if args.verbose:
         print(f"Model: {model_name}", file=sys.stderr)
@@ -212,11 +228,11 @@ Examples:
         use_streaming=not args.no_stream,
         max_retries=args.retries,
         adaptive=not args.no_adaptive,
-        temperature=args.temperature
+        temperature=args.temperature,
     )
 
     print(response)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

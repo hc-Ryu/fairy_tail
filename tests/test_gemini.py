@@ -1,19 +1,21 @@
 """
 Tests for gemini-3.py - Gemini API client with retry logic.
 """
-import pytest
-import sys
+
 import os
-from unittest.mock import Mock, patch
+import sys
+from unittest.mock import patch
+
+import pytest
 
 # Add tools directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 
 # Import after path modification
 import importlib.util
+
 spec = importlib.util.spec_from_file_location(
-    "gemini_cli",
-    os.path.join(os.path.dirname(__file__), '..', 'tools', 'gemini-3.py')
+    "gemini_cli", os.path.join(os.path.dirname(__file__), "..", "tools", "gemini-3.py")
 )
 gemini_cli = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gemini_cli)
@@ -24,17 +26,17 @@ class TestModelMapping:
 
     def test_model_map_contains_all_models(self):
         """Test that MODEL_MAP has all expected models."""
-        assert 'flash' in gemini_cli.MODEL_MAP
-        assert 'pro' in gemini_cli.MODEL_MAP
-        assert '2.5-flash' in gemini_cli.MODEL_MAP
-        assert '2.5-pro' in gemini_cli.MODEL_MAP
+        assert "flash" in gemini_cli.MODEL_MAP
+        assert "pro" in gemini_cli.MODEL_MAP
+        assert "2.5-flash" in gemini_cli.MODEL_MAP
+        assert "2.5-pro" in gemini_cli.MODEL_MAP
 
     def test_model_names_correct(self):
         """Test that model names are correctly mapped."""
-        assert gemini_cli.MODEL_MAP['flash'] == 'gemini-3-flash-preview'
-        assert gemini_cli.MODEL_MAP['pro'] == 'gemini-3-pro-preview'
-        assert gemini_cli.MODEL_MAP['2.5-flash'] == 'gemini-2.5-flash'
-        assert gemini_cli.MODEL_MAP['2.5-pro'] == 'gemini-2.5-pro'
+        assert gemini_cli.MODEL_MAP["flash"] == "gemini-3-flash-preview"
+        assert gemini_cli.MODEL_MAP["pro"] == "gemini-3-pro-preview"
+        assert gemini_cli.MODEL_MAP["2.5-flash"] == "gemini-2.5-flash"
+        assert gemini_cli.MODEL_MAP["2.5-pro"] == "gemini-2.5-pro"
 
 
 class TestThinkingMapping:
@@ -42,26 +44,26 @@ class TestThinkingMapping:
 
     def test_thinking_map_contains_all_levels(self):
         """Test that THINKING_MAP has all expected levels."""
-        assert 'minimal' in gemini_cli.THINKING_MAP
-        assert 'low' in gemini_cli.THINKING_MAP
-        assert 'medium' in gemini_cli.THINKING_MAP
-        assert 'high' in gemini_cli.THINKING_MAP
-        assert 'max' in gemini_cli.THINKING_MAP
+        assert "minimal" in gemini_cli.THINKING_MAP
+        assert "low" in gemini_cli.THINKING_MAP
+        assert "medium" in gemini_cli.THINKING_MAP
+        assert "high" in gemini_cli.THINKING_MAP
+        assert "max" in gemini_cli.THINKING_MAP
 
     def test_thinking_budgets_increasing(self):
         """Test that thinking budgets increase appropriately."""
-        assert gemini_cli.THINKING_MAP['minimal'] < gemini_cli.THINKING_MAP['low']
-        assert gemini_cli.THINKING_MAP['low'] < gemini_cli.THINKING_MAP['medium']
-        assert gemini_cli.THINKING_MAP['medium'] < gemini_cli.THINKING_MAP['high']
-        assert gemini_cli.THINKING_MAP['high'] < gemini_cli.THINKING_MAP['max']
+        assert gemini_cli.THINKING_MAP["minimal"] < gemini_cli.THINKING_MAP["low"]
+        assert gemini_cli.THINKING_MAP["low"] < gemini_cli.THINKING_MAP["medium"]
+        assert gemini_cli.THINKING_MAP["medium"] < gemini_cli.THINKING_MAP["high"]
+        assert gemini_cli.THINKING_MAP["high"] < gemini_cli.THINKING_MAP["max"]
 
     def test_thinking_budget_values(self):
         """Test specific thinking budget values."""
-        assert gemini_cli.THINKING_MAP['minimal'] == 50
-        assert gemini_cli.THINKING_MAP['low'] == 200
-        assert gemini_cli.THINKING_MAP['medium'] == 500
-        assert gemini_cli.THINKING_MAP['high'] == 2000
-        assert gemini_cli.THINKING_MAP['max'] == 10000
+        assert gemini_cli.THINKING_MAP["minimal"] == 50
+        assert gemini_cli.THINKING_MAP["low"] == 200
+        assert gemini_cli.THINKING_MAP["medium"] == 500
+        assert gemini_cli.THINKING_MAP["high"] == 2000
+        assert gemini_cli.THINKING_MAP["max"] == 10000
 
 
 class TestCreateClient:
@@ -86,7 +88,7 @@ class TestRetryLevels:
     def test_retry_levels_order(self):
         """Test that retry levels are in descending order."""
         levels = gemini_cli.RETRY_LEVELS
-        assert levels == ['high', 'medium', 'low', 'minimal']
+        assert levels == ["high", "medium", "low", "minimal"]
 
     def test_all_retry_levels_in_thinking_map(self):
         """Test that all retry levels exist in THINKING_MAP."""
@@ -99,20 +101,20 @@ class TestRetryLogic:
 
     def test_timeout_error_detection(self):
         """Test that timeout-related strings are correctly identified."""
-        timeout_errors = ['timeout', '504', 'gateway', 'deadline']
+        timeout_errors = ["timeout", "504", "gateway", "deadline"]
         for error in timeout_errors:
             # These would be detected in the error handling logic
             assert error.lower() in error.lower()  # Basic sanity check
 
     def test_rate_limit_error_detection(self):
         """Test that rate limit errors are correctly identified."""
-        rate_errors = ['429', 'rate', 'quota', 'resource_exhausted']
+        rate_errors = ["429", "rate", "quota", "resource_exhausted"]
         for error in rate_errors:
             assert error.lower() in error.lower()  # Basic sanity check
 
     def test_overload_error_detection(self):
         """Test that overload errors are correctly identified."""
-        overload_errors = ['503', 'overloaded', 'unavailable']
+        overload_errors = ["503", "overloaded", "unavailable"]
         for error in overload_errors:
             assert error.lower() in error.lower()  # Basic sanity check
 
@@ -123,9 +125,9 @@ class TestIntegration:
     def test_module_imports_successfully(self):
         """Test that the module can be imported without errors."""
         assert gemini_cli is not None
-        assert hasattr(gemini_cli, 'create_client')
-        assert hasattr(gemini_cli, 'generate_with_retry')
-        assert hasattr(gemini_cli, 'main')
+        assert hasattr(gemini_cli, "create_client")
+        assert hasattr(gemini_cli, "generate_with_retry")
+        assert hasattr(gemini_cli, "main")
 
     def test_model_map_and_thinking_map_alignment(self):
         """Test that model configurations are consistent."""
@@ -136,6 +138,6 @@ class TestIntegration:
             assert len(model_value) > 0
 
         # All thinking levels should have positive budgets
-        for level, budget in gemini_cli.THINKING_MAP.items():
+        for _level, budget in gemini_cli.THINKING_MAP.items():
             assert isinstance(budget, int)
             assert budget > 0
