@@ -117,6 +117,52 @@ export OPENAI_API_KEY="your-openai-key"
 
 <div align="center">
 
+## 🤖 지원 프로바이더
+
+*v3.0: 이제 7개 AI 프로바이더 지원*
+
+</div>
+
+<br/>
+
+<div align="center">
+
+| 프로바이더 | CLI | 최적 용도 | 필수 |
+|:--------:|:---:|:---------|:----:|
+| 🔵 **Gemini** | `gemini-3` | 기본 토론자, 사고 모드 | ✅ |
+| 🟢 **OpenAI** | `openai-cli` | 기본 토론자, o3 추론 | ✅ |
+| 🟣 **DeepSeek** | `deepseek-cli` | 수학, 추론 (R1) | 선택 |
+| ⚡ **Groq** | `groq-cli` | 초고속 추론 (LPU) | 선택 |
+| 🔶 **Grok** | `grok-cli` | 2M 컨텍스트 윈도우 | 선택 |
+| 🟠 **Mistral** | `mistral-cli` | 코드, 유럽 배포 | 선택 |
+| 🔴 **Claude** | `claude-cli` | Extended Thinking | 선택 |
+
+</div>
+
+<br/>
+
+<details>
+<summary><b>🔑 확장 프로바이더 설정</b></summary>
+
+<br/>
+
+```bash
+# 선택: 의회에 더 많은 프로바이더 추가
+export DEEPSEEK_API_KEY="your-deepseek-key"   # DeepSeek R1
+export GROQ_API_KEY="your-groq-key"           # Groq LPU
+export XAI_API_KEY="your-xai-key"             # Grok
+export MISTRAL_API_KEY="your-mistral-key"     # Mistral
+export ANTHROPIC_API_KEY="your-anthropic-key" # Claude
+```
+
+</details>
+
+<br/>
+
+---
+
+<div align="center">
+
 ## 🎯 다섯 가지 심의 모드
 
 *의회 구성을 선택하세요*
@@ -284,7 +330,7 @@ export SYNOD_RETENTION_DAYS=30
 - [ ] **VS Code 확장** — 토론 시각화 GUI
 - [ ] **지식 베이스** — 토론 히스토리 학습
 - [ ] **웹 대시보드** — 실시간 토론 모니터링
-- [ ] **더 많은 LLM** — Llama, Mistral, Claude 변형
+- [x] **더 많은 LLM** — ~~Llama, Mistral, Claude 변형~~ **v3.0: 7개 프로바이더 지원!**
 
 <br/>
 

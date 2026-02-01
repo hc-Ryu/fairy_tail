@@ -117,6 +117,52 @@ export OPENAI_API_KEY="your-openai-key"
 
 <div align="center">
 
+## 🤖 SUPPORTED PROVIDERS
+
+*v3.0: Now supporting 7 AI providers*
+
+</div>
+
+<br/>
+
+<div align="center">
+
+| Provider | CLI | Best For | Required |
+|:--------:|:---:|:---------|:--------:|
+| 🔵 **Gemini** | `gemini-3` | Default debater, thinking modes | ✅ |
+| 🟢 **OpenAI** | `openai-cli` | Default debater, o3 reasoning | ✅ |
+| 🟣 **DeepSeek** | `deepseek-cli` | Math, reasoning (R1) | Optional |
+| ⚡ **Groq** | `groq-cli` | Ultra-fast inference (LPU) | Optional |
+| 🔶 **Grok** | `grok-cli` | 2M context window | Optional |
+| 🟠 **Mistral** | `mistral-cli` | Code, European deployment | Optional |
+| 🔴 **Claude** | `claude-cli` | Extended Thinking | Optional |
+
+</div>
+
+<br/>
+
+<details>
+<summary><b>🔑 Extended Provider Setup</b></summary>
+
+<br/>
+
+```bash
+# Optional: Add more providers to your council
+export DEEPSEEK_API_KEY="your-deepseek-key"   # DeepSeek R1
+export GROQ_API_KEY="your-groq-key"           # Groq LPU
+export XAI_API_KEY="your-xai-key"             # Grok
+export MISTRAL_API_KEY="your-mistral-key"     # Mistral
+export ANTHROPIC_API_KEY="your-anthropic-key" # Claude
+```
+
+</details>
+
+<br/>
+
+---
+
+<div align="center">
+
 ## 🎯 FIVE MODES OF DELIBERATION
 
 *Choose your council configuration*
@@ -284,7 +330,7 @@ export SYNOD_RETENTION_DAYS=30
 - [ ] **VS Code Extension** — GUI for debate visualization
 - [ ] **Knowledge Base** — Learning from debate history
 - [ ] **Web Dashboard** — Real-time debate monitoring
-- [ ] **More LLMs** — Llama, Mistral, Claude variants
+- [x] **More LLMs** — ~~Llama, Mistral, Claude variants~~ **v3.0: 7 providers supported!**
 
 <br/>
 
