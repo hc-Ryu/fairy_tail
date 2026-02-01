@@ -1,5 +1,5 @@
 ---
-description: Multi-agent debate system supporting 7 AI providers (Gemini, OpenAI, DeepSeek, Groq, Grok, Mistral, Claude) (Synod v1.0)
+description: Multi-agent debate system supporting 7 AI providers (Gemini, OpenAI, DeepSeek, Groq, Grok, Mistral, Claude)
 argument-hint: [mode] [prompt] - modes: review|design|debug|idea|resume
 allowed-tools: [Read, Write, Bash, Glob, Grep, Task]
 ---
