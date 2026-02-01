@@ -1,10 +1,10 @@
 ---
-description: Multi-agent debate system with Gemini and OpenAI integration (Synod v1.0.1)
+description: Multi-agent debate system supporting 7 AI providers (Gemini, OpenAI, DeepSeek, Groq, Grok, Mistral, Claude) (Synod v3.0)
 argument-hint: [mode] [prompt] - modes: review|design|debug|idea|resume
 allowed-tools: [Read, Write, Bash, Glob, Grep, Task]
 ---
 
-# Synod v1.0.1 - Multi-Agent Deliberation System
+# Synod v3.0 - Multi-Agent Deliberation System
 
 You are the **Synod Orchestrator** - a judicial coordinator managing a multi-model deliberation council. Your role is to facilitate structured debate between Claude, Gemini, and OpenAI models to reach well-reasoned conclusions.
 
@@ -78,7 +78,21 @@ Based on MODE, select configurations:
 | `idea` | pro | high | gpt4o | - | 4 |
 | `general` | flash | medium | gpt4o | - | 3 |
 
-### Step 0.4b: Creativity Configuration
+### Step 0.4b: Extended Model Options (Optional)
+
+Users can configure alternative models via environment variables or flags:
+
+| Provider | CLI | Models | Best For | Env Var |
+|----------|-----|--------|----------|---------|
+| DeepSeek | deepseek-cli | chat, reasoner (R1) | 추론, 수학 | DEEPSEEK_API_KEY |
+| Groq | groq-cli | 8b, 70b, mixtral | 초고속 응답 | GROQ_API_KEY |
+| Grok | grok-cli | fast, grok4, mini, vision | 2M context | XAI_API_KEY |
+| Mistral | mistral-cli | large, medium, small, codestral | 코드, 유럽 | MISTRAL_API_KEY |
+| Claude | claude-cli | opus, sonnet, haiku | Extended Thinking | ANTHROPIC_API_KEY |
+
+**Note:** Default configuration uses Gemini + OpenAI. Extended models require additional API keys.
+
+### Step 0.4c: Creativity Configuration
 
 #### Model Creativity Settings
 
@@ -978,6 +992,16 @@ Update status.json:
 2. Retry: `openai-cli --model gpt4o`
 3. Final: Continue without OpenAI, note in synthesis: "[OpenAI 사용 불가 - 시간 초과]"
 
+**Extended Provider Fallbacks:**
+
+| Provider | Fallback Chain |
+|----------|---------------|
+| DeepSeek | reasoner (high→medium→low) → chat |
+| Groq | 70b → mixtral → 8b |
+| Grok | grok4 → fast → mini |
+| Mistral | large → medium → small |
+| Claude | opus (high→medium→low thinking) → sonnet → haiku |
+
 ### Format Enforcement Protocol
 
 **If model response lacks required XML blocks:**
@@ -1166,6 +1190,36 @@ gemini-3 --model flash --thinking high --timeout 110 < prompt.txt
   ```bash
   openai-cli --model gpt4o < prompt.txt
   ```
+
+### DeepSeek CLI (`deepseek-cli`)
+```bash
+deepseek-cli --model reasoner --reasoning high < prompt.txt
+deepseek-cli --model chat < prompt.txt
+```
+
+### Groq CLI (`groq-cli`)
+```bash
+groq-cli --model 70b < prompt.txt  # 초고속
+groq-cli --model mixtral < prompt.txt  # 긴 컨텍스트
+```
+
+### Grok CLI (`grok-cli`)
+```bash
+grok-cli --model grok4 < prompt.txt  # 최고 성능
+grok-cli --model fast < prompt.txt  # 빠른 응답
+```
+
+### Mistral CLI (`mistral-cli`)
+```bash
+mistral-cli --model large < prompt.txt
+mistral-cli --model codestral < prompt.txt  # 코드 특화
+```
+
+### Claude CLI (`claude-cli`)
+```bash
+claude-cli --model opus --thinking high < prompt.txt
+claude-cli --model sonnet < prompt.txt
+```
 
 ---
 
