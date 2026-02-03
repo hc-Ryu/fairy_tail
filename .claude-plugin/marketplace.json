@@ -3,7 +3,7 @@
   "name": "synod",
   "description": "Multi-agent deliberation system for Claude Code - structured debate between Claude, Gemini, and OpenAI",
   "owner": {
-    "name": "quantsquirrel"
+    "name": "hc-Ryu"
   },
   "plugins": [
     {
@@ -11,11 +11,11 @@
       "description": "Multi-agent deliberation system with 3-round structured debate, SID confidence scoring, CortexDebate Trust Score, and 5 specialized modes (review, design, debug, idea, general)",
       "version": "1.0.0",
       "author": {
-        "name": "quantsquirrel"
+        "name": "hc-Ryu"
       },
       "source": "./",
       "category": "productivity",
-      "homepage": "https://github.com/quantsquirrel/claude-synod-debate",
+      "homepage": "https://github.com/hc-Ryu/fairy_tail",
       "tags": ["multi-agent", "deliberation", "debate", "gemini", "openai", "decision-making"]
     }
   ]
