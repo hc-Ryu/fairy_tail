@@ -1,11 +1,11 @@
-<!-- Parent: ../AGENTS.md -->
+<!-- Moved from: skills/AGENTS.md -->
 <!-- Generated: 2026-01-31T00:00:00Z -->
 
-# Skills Directory - Synod Multi-Agent Deliberation System
+# Skills Reference - Synod Multi-Agent Deliberation System
 
 This directory contains Claude Code skill definitions for the Synod v1.0 multi-agent deliberation plugin. Skills are executable commands that users invoke via the Claude Code CLI to trigger structured multi-model debate.
 
-**Directory:** `/Users/ahnjundaram_g/dev/tools/synod-plugin/skills/`
+**Skills Location:** `skills/`
 
 ---
 

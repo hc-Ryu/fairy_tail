@@ -23,6 +23,12 @@ import random
 import sys
 import time
 
+# Fix Windows cp949 encoding issue
+if sys.platform == "win32":
+    sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 try:
     import httpx
     from openai import OpenAI

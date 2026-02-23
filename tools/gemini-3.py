@@ -16,6 +16,11 @@ import os
 import sys
 import time
 
+# Fix Windows cp949 encoding issue
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 # Suppress warnings
 import warnings
 
