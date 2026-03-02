@@ -1,0 +1,131 @@
+\documentclass[12pt,a4paper, fleqn]{article}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{amsmath}
+\usepackage{kotex}
+\allowdisplaybreaks
+
+\title{Score function space transformation Technique}
+\author{Derivation Based on Differentiability and Chain Rule}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% =======================================================
+% Section1. Varialbe Definition
+% =======================================================
+\section{Variable Definition}
+\vspace{12pt}
+$
+\begin{aligned}
+    &\mathbf{X}: \text{Random data set}\\
+    &\mathbf{x_i}: \text{$i$th dimension random vector}\\
+    &\mathbf{d}: \text{mean vector of Random data set $\mathbf{X}$}\\
+    &d_i: \text{$i$th mean of Random vector}\\
+    &\mathbf{u}: \text{normalized vector of random data set $\mathbf{X}$}\\
+\end{aligned}    
+$
+
+% =======================================================
+% Section2. Change of variable Technique
+% =======================================================
+
+\section{Change of variable Technique}
+\begin{itemize}
+    \item scaling
+    \begin{equation}
+        \begin{aligned}
+            &p_{\mathbf{X}}(\mathbf{x};\mathbf{d}) = \frac{1}{\Pi_{i=1}^{10}d_i}\cdot p_{0}(\mathbf{x}\oslash \mathbf{d}) \\
+        \\
+        &\mathrm{log}\:p_{\mathbf{X}}(\mathbf{x};\mathbf{d})=-\sum_{i=1}^{10} \mathrm{log}\:d_i + \mathrm{log}\:p_0(\mathbf{x}\oslash \mathbf{d}) \\
+        \\
+        &*\mathbf{S_k}(\mathbf{X};\mathbf{d}) = \nabla_{d_i}\: \mathrm{log}\:p(\mathbf{x};\mathbf{d})\\
+        \\
+        &\frac{\partial}{\partial d_{i}} \log p_{\mathbf{X}}(\mathbf{X};\mathbf{d}) = \frac{\partial}{\partial d_{i}} \left( -\sum_{i=1}^{10} \log d_i \right) + \frac{\partial}{\partial d_{i}} \log p_{\mathbf{0}}(\mathbf{x}\oslash \mathbf{d})\\
+        \\
+        &\text{1st. term; Jacobian Term}\\
+        \\
+        &\frac{\partial}{\partial d_{i}} \left( -\sum_{j=1}^{10}\log d_i \right) = -\frac{1}{d_{i}}\\
+        \\
+        &\text{2nd. term; Shape Term}\\
+        \\
+        &*\mathbf{u} = \mathbf{X} \oslash \mathbf{d},\: \mathbf{u}_i = \mathbf{x}_i/d_i, \: \frac{\partial \mathbf{u}_i}{\partial d_i}=-\frac{\mathbf{x}_i}{{d_i}^2}\\
+        \\
+        &\frac{\partial}{\partial d_i}\mathrm{log}\:p_0(\mathbf{X}\oslash \mathbf{d}) = \frac{\partial \mathbf{u}_i}{\partial {d_i}}\cdot\frac{\partial}{\partial \mathbf{u}_i}\cdot\mathrm{log}\:p_0(\mathbf{u})\\
+        \\
+        & \hspace{90pt}=-\frac{\mathbf{x}_i}{d_i^2}\cdot\mathbf{S}_i(\mathbf{u})\\
+        \\
+        & \hspace{90pt}=-\frac{\mathbf{x}_i}{d_i^2}\cdot\mathbf{S}_i(\mathbf{u})\\
+        \\
+        & \hspace{90pt}=-\frac{\mathbf{x}_i}{d_i^2}\cdot d_i \cdot \mathbf{S}_i(\mathbf{X}/\mathbf{d}_i \cdot \mathbf{d}_i)\\
+        \\
+        & \hspace{90pt}=-\frac{\mathbf{x}_i}{d_i} \cdot \mathbf{S}_i(\mathbf{X})\\
+        \end{aligned}
+        \nonumber
+    \end{equation}
+    
+    \begin{equation}
+        \begin{aligned}
+        & 1st. term + 2nd. term\\
+        \\
+        & \mathbf{S_k}(\mathbf{X};\mathbf{d})=-\frac{1}{d_i} + -\frac{\mathbf{x}_i}{d_i} \cdot \mathbf{S}_i(\mathbf{X})\\
+        \\
+        & \hspace{60pt} = -\frac{1}{d_i}\left(1+ \mathbf{x}_i \cdot \mathbf{S}_i(\mathbf{X})\right)\\
+        \\
+        & \mathbf{S_d}(\mathbf{X})= -\mathrm{diag}(\mathbf{d})^{-1}\left(1+ \mathrm{diag}(\mathbf{X}) \cdot \mathbf{S}_{\mathbf{X}}(\mathbf{X})\right)
+        \end{aligned}
+        \nonumber
+    \end{equation}
+
+    \item shifting \\
+    \\
+\end{itemize}
+% =======================================================
+% Section3. Example
+% =======================================================
+
+\section{Example}
+\begin{itemize}
+    \item Binomial gaussian distribution
+    \begin{equation*}
+        \begin{aligned}
+        &f(\mathbf{x}; \boldsymbol{\mu}, \boldsymbol{\Sigma}) = \frac{1}{2\pi \sqrt{|\boldsymbol{\Sigma}|}} \exp\left( -\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu}) \right)\\\\
+        &\boldsymbol{\mu}: \text{평균 벡터} [\mu_1, \mu_2]^\top\\\\
+        &*\boldsymbol{\Sigma} = \begin{bmatrix} \sigma_1^2 & \rho\sigma_1\sigma_2 \\ \rho\sigma_1\sigma_2 & \sigma_2^2 \end{bmatrix}\\
+        \end{aligned}
+        \nonumber
+    \end{equation*}
+
+    \begin{itemize}
+        \item[] $\bullet$ score function w.r.t. X
+        \begin{equation}
+            \begin{aligned}
+            &\log f(\mathbf{x}) = \log \left( \frac{1}{2\pi \sqrt{|\boldsymbol{\Sigma}|}} \right) + \log \left( \exp \left( -\frac{1}{2} (\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu}) \right) \right)\\
+            &\log f(\mathbf{x}) = \underbrace{-\log(2\pi) - \frac{1}{2} \log |\boldsymbol{\Sigma}|}_{\text{Constant Term (w.r.t. } \mathbf{x})} \underbrace{-\frac{1}{2} (\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu})}_{\text{Quadratic Term}}\\
+            &\nabla_{\mathbf{x}} \log f(\mathbf{x}) = -\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu}) = \left[ -\frac{x_1-\mu_1}{\sigma_1^2}, -\frac{x_2-\mu_2}{\sigma_2^2} \right]^\top
+            \end{aligned}
+            \nonumber
+        \end{equation}
+
+        \item[] $\bullet$ score function w.r.t. $\mu$
+        \begin{equation}
+            \begin{aligned}
+            &\ln f(\mathbf{x}; \boldsymbol{\mu}, \boldsymbol{\Sigma}) = \ln\left(\frac{1}{2\pi \sqrt{|\boldsymbol{\Sigma}|}}\right) - \frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu})\\
+            \end{aligned}
+            \nonumber
+        \end{equation}
+
+    \end{itemize}
+
+    \item Binomial lognormal distribution
+\end{itemize}
+
+
+\end{document}
