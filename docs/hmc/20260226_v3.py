@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[11]:
+
+
+#!/usr/bin/env python
+# coding: utf-8
+
 # In[5]:
 
 
 #!/usr/bin/env python
 # coding: utf-8
 """
-B-Pillar CGNN v3 - Improved Demo Code
+B-Pillar CGNN v2 - Improved Demo Code
 Synod design deliberation 결과 반영:
   1. Per-block FiLM Generators (4개 독립 generator)
   2. compute_smoothness_loss 수정: 절대 엣지 길이 → 상대 변화량 기반
@@ -15,11 +21,6 @@ Synod design deliberation 결과 반영:
   4. Section continuity loss 추가 (3D 형상 연속성)
   5. Monotonicity loss 추가 (Inner < Reinf < Outer Y좌표 순서 강제)
   6. 코드 일관성: in_channels=7 명시적 기본값, base_coords 전달 구조화
-  [v3 Synod idea 반영]
-  7. Fix 1: is_fixed 필터링 — collision_loss/monotonicity_loss에서 고정 노드 제외
-            y_outer.min()=0 (고정 코너 포함) → gap 상시 활성 버그 수정
-  8. Fix 2: Anchor-Pair Min-Gap Loss — Reinf-Outer 노드 쌍별 Y 최소 거리 보장
-            Aggregate(max/min) 방식의 단일 노드 위반 누락 문제 해결
 """
 
 import matplotlib.pyplot as plt
@@ -100,7 +101,7 @@ def calculate_mpl(coords, t, fy, edge_index):
     return ImplicitPNASolver.apply(coords, t, fy, edge_index)
 
 
-# In[6]:
+# In[12]:
 
 
 ## ─────────────────────────────────────────────────────────────
@@ -267,15 +268,8 @@ def compute_smoothness_loss(new_coords, base_coords, edge_index):
     return torch.mean(rel_change ** 2)
 
 
-def compute_collision_loss(new_coords, part_ids, section_ids, is_fixed, margin=0.5):
-    """층별 다중 파트 간섭 방지 (Y좌표 기반, Free 노드 전용)
-
-    Fix 1: is_fixed 필터링
-      이전: mask_1 = (p_lvl == 0) → 고정 코너 노드(Y=0) 포함
-            → y_outer.min() = 0, gap_2_1 = 35 - 0 + 0.5 = 35.5 → 상시 활성 (잘못된 그래디언트)
-      수정: mask_1 = (p_lvl == 0) & (f_lvl == 0) → 자유 노드만
-            → y_outer.min() ≈ 48, gap_2_1 = 35 - 48 + 0.5 = -12.5 → clamp(0) = 0 (충돌 없을 때)
-    """
+def compute_collision_loss(new_coords, part_ids, section_ids, margin=0.5):
+    """층별 다중 파트 간섭 방지 (Y좌표 기반)"""
     total_collision_loss = torch.tensor(0.0, device=new_coords.device)
     unique_sections = torch.unique(section_ids)
 
@@ -283,11 +277,10 @@ def compute_collision_loss(new_coords, part_ids, section_ids, is_fixed, margin=0
         lvl_mask = (section_ids == lvl)
         y_lvl = new_coords[lvl_mask, 1]
         p_lvl = part_ids[lvl_mask]
-        f_lvl = is_fixed[lvl_mask]             # Fix 1
 
-        mask_1 = (p_lvl == 0) & (f_lvl == 0)  # Outer FREE only
-        mask_2 = (p_lvl == 1) & (f_lvl == 0)  # Reinf FREE only
-        mask_3 = (p_lvl == 2) & (f_lvl == 0)  # Inner FREE only
+        mask_1 = (p_lvl == 0)  # Outer
+        mask_2 = (p_lvl == 1)  # Reinf
+        mask_3 = (p_lvl == 2)  # Inner
 
         if mask_2.any() and mask_3.any():
             gap_3_2 = torch.clamp(y_lvl[mask_3].max() - y_lvl[mask_2].min() + margin, min=0.0)
@@ -301,13 +294,11 @@ def compute_collision_loss(new_coords, part_ids, section_ids, is_fixed, margin=0
     return total_collision_loss
 
 
-def compute_monotonicity_loss(new_coords, part_ids, section_ids, is_fixed, margin=2.0):
+def compute_monotonicity_loss(new_coords, part_ids, section_ids, margin=2.0):
     """
     v2 추가: Inner < Reinf < Outer Y좌표 순서를 Soft constraint로 강제
     collision_loss를 보완하여 파트 간 Y 순서 단조성 보장
     margin=2.0mm: collision_loss의 0.5mm보다 넓어 조기 경고 역할
-
-    Fix 1: is_fixed 필터링 — 자유 노드만 Y 순서 비교 (고정 코너 노드 제외)
     """
     loss = torch.tensor(0.0, device=new_coords.device)
     unique_sections = torch.unique(section_ids)
@@ -316,17 +307,16 @@ def compute_monotonicity_loss(new_coords, part_ids, section_ids, is_fixed, margi
         mask = (section_ids == sec)
         y_sec = new_coords[mask, 1]
         p_sec = part_ids[mask]
-        f_sec = is_fixed[mask]                          # Fix 1
 
-        y_outer = y_sec[(p_sec == 0) & (f_sec == 0)]   # Outer FREE
-        y_inner = y_sec[(p_sec == 2) & (f_sec == 0)]   # Inner FREE
+        y_outer = y_sec[p_sec == 0]  # Outer
+        y_inner = y_sec[p_sec == 2]  # Inner
 
         if y_outer.numel() > 0 and y_inner.numel() > 0:
             # Inner 최대 Y < Outer 최소 Y (margin 포함)
             loss += torch.relu(y_inner.max() - y_outer.min() + margin) ** 2
 
-            if ((p_sec == 1) & (f_sec == 0)).any():     # Reinf FREE 존재 시 추가 단조성
-                y_reinf = y_sec[(p_sec == 1) & (f_sec == 0)]
+            if (p_sec == 1).any():  # Reinf 존재 시 추가 단조성
+                y_reinf = y_sec[p_sec == 1]
                 loss += torch.relu(y_inner.max() - y_reinf.min() + margin) ** 2
                 loss += torch.relu(y_reinf.max() - y_outer.min() + margin) ** 2
 
@@ -372,63 +362,7 @@ def compute_mass_loss(new_coords, t, edge_index):
     return area
 
 
-def build_anchor_pairs(base_coords, part_ids, section_ids, is_fixed):
-    """
-    Fix 2: 초기 형상에서 Reinf-Outer 노드 대응 쌍 생성 (학습 전 1회 호출)
-
-    같은 섹션 내 자유 Reinf 노드 각각에 대해 X좌표가 가장 가까운 자유 Outer 노드를 매핑.
-    반환된 pairs는 compute_anchor_gap_loss에서 쌍별 Y 최소 거리 제약에 사용.
-
-    Args:
-        base_coords : [N, 2] 초기 좌표 (x[:, :2])
-        part_ids    : [N]    파트 ID (x[:, 3])
-        section_ids : [N]    섹션 ID (x[:, 4])
-        is_fixed    : [N]    고정 여부 float (x[:, 2])
-
-    Returns:
-        pairs: List[Tuple[int, int]] — (reinf_node_idx, outer_node_idx)
-    """
-    pairs = []
-    unique_sections = torch.unique(section_ids)
-    for sec in unique_sections:
-        mask_outer = (section_ids == sec) & (part_ids == 0) & (is_fixed == 0)
-        mask_reinf = (section_ids == sec) & (part_ids == 1) & (is_fixed == 0)
-        if not mask_reinf.any() or not mask_outer.any():
-            continue
-        outer_idx = torch.where(mask_outer)[0]
-        reinf_idx = torch.where(mask_reinf)[0]
-        for ri in reinf_idx:
-            dist_x = torch.abs(base_coords[outer_idx, 0] - base_coords[ri, 0])
-            nearest_oi = outer_idx[torch.argmin(dist_x)]
-            pairs.append((int(ri.item()), int(nearest_oi.item())))
-    return pairs
-
-
-def compute_anchor_gap_loss(new_coords, anchor_pairs, min_gap=5.0):
-    """
-    Fix 2: Anchor-Pair 기반 per-node Y 최소 거리 보장
-
-    각 (Reinf_i, Outer_j) 쌍에서 (Y_outer - Y_reinf) < min_gap 이면 패널티.
-    Aggregate(max/min) 방식에서 놓치는 단일 노드 위반을 개별적으로 감지.
-
-    Args:
-        new_coords  : [N, 2] 변형 후 좌표
-        anchor_pairs: build_anchor_pairs()의 반환값
-        min_gap     : Reinf-Outer 사이 최소 Y 거리 (mm)
-
-    Returns:
-        loss: Σ relu(min_gap - (Y_outer_j - Y_reinf_i))²
-    """
-    if not anchor_pairs:
-        return torch.tensor(0.0, device=new_coords.device)
-    loss = torch.tensor(0.0, device=new_coords.device)
-    for ri, oi in anchor_pairs:
-        y_gap = new_coords[oi, 1] - new_coords[ri, 1]   # Y_outer - Y_reinf
-        loss += torch.relu(min_gap - y_gap) ** 2
-    return loss
-
-
-# In[7]:
+# In[13]:
 
 
 ## ─────────────────────────────────────────────────────────────
@@ -436,10 +370,9 @@ def compute_anchor_gap_loss(new_coords, anchor_pairs, min_gap=5.0):
 ## ─────────────────────────────────────────────────────────────
 
 def train_step(model, data, optimizer, target_mps,
-               anchor_pairs=None,
-               w_phys=1000.0, w_smooth=0.1, w_mass=0.0001,
-               w_collision=50.0, w_fix=100.0,
-               w_monotone=30.0, w_continuity=1.0, w_anchor=20.0,
+               w_phys=10000000.0, w_smooth=0.01, w_mass=0.0001,
+               w_collision=10.0, w_fix=100.0,
+               w_monotone=10.0, w_continuity=1.0,
                max_grad_norm=1.0):
     """
     v2 변경사항:
@@ -447,10 +380,6 @@ def train_step(model, data, optimizer, target_mps,
     - section_continuity_loss, monotonicity_loss 추가
     - 그래디언트 클리핑 추가 (IFT 안정성)
     - w_smooth 조정: 0.01 → 0.1 (상대 변화량 기준으로 scale 변경)
-
-    v3 변경사항 (Fix 1, 2):
-    - is_fixed 필터링을 collision_loss/monotonicity_loss에 전달
-    - anchor_pairs 기반 per-node gap loss 추가 (Fix 2)
     """
     model.train()
     optimizer.zero_grad()
@@ -461,7 +390,6 @@ def train_step(model, data, optimizer, target_mps,
     base_coords = data.x[:, :2].detach()         ## [N, 2] 초기 좌표 (역전파 차단)
 
     is_fixed_mask = x[:, 2].bool().unsqueeze(1)
-    is_fixed_flat = x[:, 2]                          # Fix 1: float [N], 0=free / 1=fixed
     part_ids      = x[:, 3]
     section_ids   = x[:, 4]
     t             = x[:, 5].unsqueeze(1)
@@ -505,14 +433,11 @@ def train_step(model, data, optimizer, target_mps,
     # v2: smoothness에 base_coords 전달 (상대 변화량 기준)
     l_smooth = compute_smoothness_loss(new_coords, base_coords, edge_index)
     l_mass = compute_mass_loss(new_coords, t, edge_index)
-    l_collision = compute_collision_loss(new_coords, part_ids, section_ids, is_fixed_flat)   # Fix 1
+    l_collision = compute_collision_loss(new_coords, part_ids, section_ids)
 
     # v2 추가 손실
-    l_monotone = compute_monotonicity_loss(new_coords, part_ids, section_ids, is_fixed_flat)  # Fix 1
+    l_monotone = compute_monotonicity_loss(new_coords, part_ids, section_ids)
     l_continuity = compute_section_continuity_loss(new_coords, base_coords, section_ids, part_ids)
-
-    # v3 Fix 2: Anchor-Pair min-gap loss
-    l_anchor = compute_anchor_gap_loss(new_coords, anchor_pairs or [])
 
     fixed_nodes = is_fixed_mask.squeeze()
     if fixed_nodes.any():
@@ -526,9 +451,8 @@ def train_step(model, data, optimizer, target_mps,
           + w_mass      * l_mass
           + w_collision * l_collision
           + w_fix       * l_fix
-          + w_monotone  * l_monotone       # v2 추가
-          + w_continuity * l_continuity    # v2 추가
-          + w_anchor    * l_anchor)        # v3 Fix 2
+          + w_monotone  * l_monotone      # v2 추가
+          + w_continuity * l_continuity)  # v2 추가
 
     loss.backward()
 
@@ -547,12 +471,11 @@ def train_step(model, data, optimizer, target_mps,
         "l_fix":         l_fix.item() if isinstance(l_fix, torch.Tensor) else l_fix,
         "l_monotone":    l_monotone.item(),
         "l_continuity":  l_continuity.item(),
-        "l_anchor":      l_anchor.item(),
         "new_coords":    new_coords.detach(),
     }
 
 
-# In[8]:
+# In[14]:
 
 
 ## ─────────────────────────────────────────────────────────────
@@ -584,25 +507,13 @@ for section in [0, 1, 2]:
 
     for part in parts_in_section:
         for i in range(num_nodes):
-            if part == 1:  # Reinf
-                if i == 0:
-                    x_coord = 1 * (100.0 / 9.0)
-                    y_coord = 0.0
-                elif i == 9:
-                    x_coord = 8 * (100.0 / 9.0)
-                    y_coord = 0.0
-                else:
-                    x_coord = i * (100.0 / 9.0)
-                    y_coord = 35.0
-            else:  # Outer(0), Inner(2)
-                x_coord = i * (100.0 / 9.0)
-                if i in [0, 1, 8, 9]:
-                    y_coord = 0.0
-                else:
-                    y_coord = 20.0 if part == 2 else 50.0
+            x_coord = i * (100.0 / 9.0)
+            if i in [0, 1, 8, 9]:
+                y_coord = 0.0
+            else:
+                y_coord = 20.0 if part == 2 else 30.0 if part == 1 else 50.0
 
-            is_fixed = 1.0 if ((part in [0, 2] and (i in [0, 1, 8, 9])) or
-                               (part == 1 and (i in [0, 9]))) else 0.0
+            is_fixed = 1.0 if (i in [0, 1, 8, 9]) else 0.0
             t_val = 1.5 if part != 1 else 2.0
             fy_val = 1500.0 if part != 2 else 1200.0
 
@@ -712,7 +623,7 @@ plt.tight_layout()
 plt.show()
 
 
-# In[ ]:
+# In[16]:
 
 
 ## ─────────────────────────────────────────────────────────────
@@ -756,18 +667,9 @@ if __name__ == "__main__":
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr).to(device)
 
-    ## Fix 2: Anchor-Pair 사전 계산 (학습 전 1회, CPU에서 수행)
-    anchor_pairs = build_anchor_pairs(
-        base_coords=x[:, :2],
-        part_ids=x[:, 3],
-        section_ids=x[:, 4],
-        is_fixed=x[:, 2],
-    )
-
     print("=" * 70)
-    print("CGDN v3 Training Log")
+    print("CGDN v2 Training Log")
     print(f"Model params: {sum(p.numel() for p in model.parameters()):,}")
-    print(f"Anchor pairs (Reinf-Outer): {len(anchor_pairs)}")
     print("=" * 70)
 
     loss_hist = []
@@ -778,10 +680,9 @@ if __name__ == "__main__":
     l_fix_hist = []
     l_monotone_hist = []
     l_continuity_hist = []
-    l_anchor_hist = []
 
     for epoch in range(max_epochs):
-        info = train_step(model, data, optimizer, target_mps, anchor_pairs=anchor_pairs)
+        info = train_step(model, data, optimizer, target_mps)
 
         l_phys_hist.append(info['l_phys'])
         l_smooth_hist.append(info['l_smooth'])
@@ -790,7 +691,6 @@ if __name__ == "__main__":
         l_fix_hist.append(info['l_fix'])
         l_monotone_hist.append(info['l_monotone'])
         l_continuity_hist.append(info['l_continuity'])
-        l_anchor_hist.append(info['l_anchor'])
         loss_hist.append(info['loss'])
 
         if epoch % 10 == 0:
@@ -803,28 +703,27 @@ if __name__ == "__main__":
                 f"Smth: {info['l_smooth']:.4f}  "
                 f"Coll: {info['l_collision']:.4f}  "
                 f"Mono: {info['l_monotone']:.4f}  "
-                f"Cont: {info['l_continuity']:.4f}  "
-                f"Anchor: {info['l_anchor']:.4f}"
+                f"Cont: {info['l_continuity']:.4f}"
             )
 
-    ## ── Loss 시각화 (8개 서브플롯) ──
+    ## ── Loss 시각화 (7개 서브플롯) ──
     epochs = list(range(max_epochs))
-    fig, axes = plt.subplots(8, 1, figsize=(8, 18), sharex=True)
-    labels = ['L_phys', 'L_smooth', 'L_mass', 'L_collision', 'L_fix', 'L_monotone', 'L_continuity', 'L_anchor']
+    fig, axes = plt.subplots(7, 1, figsize=(8, 16), sharex=True)
+    labels = ['L_phys', 'L_smooth', 'L_mass', 'L_collision', 'L_fix', 'L_monotone', 'L_continuity']
     hists  = [l_phys_hist, l_smooth_hist, l_mass_hist, l_collision_hist,
-               l_fix_hist, l_monotone_hist, l_continuity_hist, l_anchor_hist]
+               l_fix_hist, l_monotone_hist, l_continuity_hist]
 
     for ax, lbl, hist, c in zip(axes, labels, hists, [f'C{i}' for i in range(7)]):
         ax.plot(epochs, hist, label=lbl, color=c)
         ax.grid(True, alpha=0.3)
         ax.legend(loc='upper right')
     axes[-1].set_xlabel('Epoch')
-    plt.suptitle('CGDN v3 Training Loss', fontweight='bold')
+    plt.suptitle('CGDN v2 Training Loss', fontweight='bold')
     plt.tight_layout()
     plt.show()
 
 
-# In[10]:
+# In[27]:
 
 
 ## ─────────────────────────────────────────────────────────────
@@ -942,4 +841,80 @@ for i in (2, 1, 0):
         deformed_coords=deformed,
         section_start=s,
     )
+
+## ─────────────────────────────────────────────────────────────
+## 3D Visualization
+## ─────────────────────────────────────────────────────────────
+def visualize_3d_final_shape(base_coords, new_coords, edge_index, part_ids, section_ids, edge_attr):
+    """
+    최종 형상을 3D로 시각화하는 함수
+    :param base_coords: 초기 좌표 (Base Shape)
+    :param new_coords: 변형된 좌표 (Deformed Shape)
+    :param edge_index: 엣지 연결 정보
+    :param part_ids: 파트 ID (Outer, Reinf, Inner)
+    :param section_ids: 섹션 ID (층 정보)
+    :param edge_attr: 엣지 속성 (edge_type 포함)
+    """
+    fig = plt.figure(figsize=(12, 10))
+    ax = fig.add_subplot(111, projection='3d')
+
+    base_np = base_coords.cpu().numpy()
+    deformed_np = new_coords.cpu().detach().numpy()
+    edge_np = edge_index.cpu().numpy()
+    part_np = part_ids.cpu().numpy()
+    section_np = section_ids.cpu().numpy()
+    edge_attr_np = edge_attr.cpu().numpy()
+
+    color_map = {0: '#2196F3', 1: '#4CAF50', 2: '#FF5722'}  # Outer, Reinf, Inner 색상
+
+    # 엣지 렌더링 (Base와 Deformed Shape)
+    for i in range(edge_np.shape[1]):
+        u, v = edge_np[:, i]
+        xs_base = [base_np[u, 0], base_np[v, 0]]
+        ys_base = [base_np[u, 1], base_np[v, 1]]
+        zs_base = [section_np[u], section_np[v]]
+
+        xs_def = [deformed_np[u, 0], deformed_np[v, 0]]
+        ys_def = [deformed_np[u, 1], deformed_np[v, 1]]
+        zs_def = [section_np[u], section_np[v]]
+
+        edge_type = edge_attr_np[i, 3]  # edge_type: 0.0 (intra-section), 1.0 (inter-section)
+        if edge_type == 0.0:  # 층 안의 엣지 (진하게)
+            ax.plot(xs_base, ys_base, zs_base, color='#BBBBBB', linestyle='--', linewidth=1.5, alpha=0.7)
+            ax.plot(xs_def, ys_def, zs_def, color='k', linestyle='-', linewidth=2.0, alpha=0.7)
+        elif edge_type == 1.0:  # 층 간의 엣지 (연하게)
+            ax.plot(xs_base, ys_base, zs_base, color='#DDDDDD', linestyle='--', linewidth=1.0, alpha=0.4)
+            ax.plot(xs_def, ys_def, zs_def, color='k', linestyle='-', linewidth=1.0, alpha=0.1)
+
+    # 노드 렌더링 (Deformed Shape)
+    for part_id in [0, 1, 2]:  # Outer, Reinf, Inner
+        mask = (part_np == part_id)
+        ax.scatter(deformed_np[mask, 0], deformed_np[mask, 1], section_np[mask],
+                   c=color_map[part_id], label={0: 'Outer', 1: 'Reinf', 2: 'Inner'}[part_id],
+                   s=50, edgecolors='k', alpha=0.9)
+
+    ax.set_xlabel('X (mm)')
+    ax.set_ylabel('Y (mm)')
+    ax.set_zlabel('Section ID')
+    ax.set_title('3D Visualization of Final Shape', fontsize=14, fontweight='bold')
+    ax.set_zticks([0, 1, 2])
+    ax.view_init(elev=25, azim=-60)
+    ax.legend(loc='upper left', fontsize=10)
+    plt.tight_layout()
+    plt.show()
+
+
+# ── 최종 형상 시각화 실행 ──
+print("\n" + "="*70)
+print("Generating 3D Visualization of Final Shape...")
+print("="*70)
+
+visualize_3d_final_shape(
+    base_coords=data.x[:, :2],               # 초기 좌표
+    new_coords=info['new_coords'],           # 최종 변형된 좌표
+    edge_index=data.edge_index,              # 엣지 연결 정보
+    part_ids=data.x[:, 3],                   # 파트 ID
+    section_ids=data.x[:, 4],                # 섹션 ID
+    edge_attr=data.edge_attr                 # 엣지 속성
+)
 
