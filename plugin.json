@@ -17,5 +17,5 @@
     "openai",
     "llm-orchestration"
   ],
-  "skills": "./skills/"
+  "skills": "skills"
 }
