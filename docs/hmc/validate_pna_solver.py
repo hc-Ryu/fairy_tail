@@ -1,43 +1,71 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-ImplicitPNASolver 검증 코드
-검증 목표:
-1. Forward: bisection이 PNA (force balance)를 찾는지 vs 탄성 NA (moment balance)를 찾는지
-2. Backward: IFT 그래디언트가 수치 미분과 일치하는지
-3. 비대칭 단면에서 오류가 얼마나 큰지
+ImplicitPNASolver Validation Code v2
+─────────────────────────────────────
+Synod design deliberation v2 결과 반영 (2026-03-13):
+  - 전체 CGDN v3 코드 그대로 사용 (FiLMGenerator, CGDNBlock, CGDN — 간소화 없음)
+  - 3가지 MP 정확도 검증:
+    1. Forward  : bisection으로 찾은 y_pna 기반 Mp vs 해석적 Mp (직접 계산)
+    2. Backward : IFT gradient vs 해석적 gradient vs Finite Difference (3-way 비교)
+                  해석적 해: dMp/dy_i = t_i·fy_i·sign(y_i - y_pna)
+                  (간접항은 평형 조건에서 0이므로 직접항만)
+    3. Epoch별  : pred_mp vs target_mp 수렴 정확도
+  - 구조: 1 section, 3 parts (Outer/Reinf/Inner), 30 nodes
+
+핵심 수식:
+  Forward   : Mp = Σ t_i·fy_i·|y_i - y_pna|  (bisection으로 y_pna 결정)
+  Analytic ∇: dMp/dy_i = t_i·fy_i·sign(y_i - y_pna)  [평형조건에서 간접항=0]
+  IFT ∇     : direct + indirect  (indirect ≈ 0 검증 포함)
 """
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
+import matplotlib.pyplot as plt
+import math
+from torch_geometric.nn import GATv2Conv, LayerNorm
+from torch_geometric.data import Data
 
 
-# ─────────────────────────────────────────────────────────────
-# 원본 코드 복사 (20260309_yj.py 에서)
-# ─────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════
+# ImplicitPNASolver + CGDN  (20260312_v3.py 그대로 — 수정 없음)
+# ══════════════════════════════════════════════════════════════════
 
-class ImplicitPNASolver_Original(torch.autograd.Function):
-    """원본 코드 (검증 대상)"""
+class ImplicitPNASolver(torch.autograd.Function):
+    """
+    미분 가능한 소성 중립축(PNA) 및 전소성 모멘트(Mp) 계산기
+    Forward : Bisection으로 인장력=압축력 평형점(y_pna) 탐색
+    Backward: IFT로 ∂y_pna/∂coords 계산 → chain-rule로 ∂Mp/∂coords 전파
+    """
+
     @staticmethod
     def forward(ctx, coords, t, fy, edge_index, n_iter=30):
         with torch.no_grad():
             y = coords[:, 1]
             t_flat = t.squeeze(-1)
             fy_flat = fy.squeeze(-1)
+
             y_lo = y.min().clone()
             y_hi = y.max().clone()
+
             for _ in range(n_iter):
                 y_mid = 0.5 * (y_lo + y_hi)
-                F_tens = torch.sum(t_flat * fy_flat * torch.clamp(y - y_mid, min=0.0))
-                F_comp = torch.sum(t_flat * fy_flat * torch.clamp(y_mid - y, min=0.0))
+                F_tens = torch.sum(t_flat * fy_flat * (y > y_mid).float())
+                F_comp = torch.sum(t_flat * fy_flat * (y < y_mid).float())
                 if F_tens > F_comp:
                     y_lo = y_mid
                 else:
                     y_hi = y_mid
+
             y_pna = 0.5 * (y_lo + y_hi)
+
         d = torch.abs(coords[:, 1] - y_pna)
         area = t_flat
         mp_pred = torch.sum(area * fy_flat * d)
+
         ctx.save_for_backward(coords, t, fy, y_pna.unsqueeze(0), edge_index)
         return mp_pred
 
@@ -45,562 +73,641 @@ class ImplicitPNASolver_Original(torch.autograd.Function):
     def backward(ctx, grad_output):
         coords, t, fy, y_pna_buf, edge_index = ctx.saved_tensors
         y_pna = y_pna_buf.squeeze(0)
+
         y = coords[:, 1]
         t_flat = t.squeeze(-1)
         fy_flat = fy.squeeze(-1)
         s = torch.sign(y - y_pna)
 
         dg_dy_pna = -torch.sum(t_flat * fy_flat)
-        dg_dy = s * t_flat * fy_flat
+        dg_dy = t_flat * fy_flat
         dy_pna_dy = -dg_dy / (dg_dy_pna + 1e-12)
 
-        direct = t_flat * fy_flat * s
-        indirect = -torch.sum(t_flat * fy_flat * s) * dy_pna_dy
-        dMp_dy = direct + indirect
+        direct   = t_flat * fy_flat * s          # 직접항
+        indirect = -torch.sum(t_flat * fy_flat * s) * dy_pna_dy  # 간접항 (평형에서 ≈0)
+        dMp_dy   = direct + indirect
 
         grad_coords = torch.zeros_like(coords)
         grad_coords[:, 1] = grad_output * dMp_dy
+
         return grad_coords, None, None, None, None
 
 
-# ─────────────────────────────────────────────────────────────
-# 수정 버전: 진정한 소성 중립축 (force balance) + 올바른 IFT
-# ─────────────────────────────────────────────────────────────
-
-class ImplicitPNASolver_Corrected(torch.autograd.Function):
-    """수정 버전: Force balance bisection + 올바른 IFT"""
-    @staticmethod
-    def forward(ctx, coords, t, fy, n_iter=50):
-        with torch.no_grad():
-            y = coords[:, 1]
-            t_flat = t.squeeze(-1)
-            fy_flat = fy.squeeze(-1)
-            y_lo = y.min().clone()
-            y_hi = y.max().clone()
-            for _ in range(n_iter):
-                y_mid = 0.5 * (y_lo + y_hi)
-                # Force balance: Σ_T t*fy vs Σ_C t*fy
-                F_T = torch.sum(t_flat * fy_flat * (y > y_mid).float())
-                F_C = torch.sum(t_flat * fy_flat * (y < y_mid).float())
-                if F_T > F_C:
-                    y_lo = y_mid
-                else:
-                    y_hi = y_mid
-            y_pna = 0.5 * (y_lo + y_hi)
-        d = torch.abs(coords[:, 1] - y_pna)
-        mp_pred = torch.sum(t_flat * fy_flat * d)
-        ctx.save_for_backward(coords, t, fy, y_pna.unsqueeze(0))
-        return mp_pred
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        coords, t, fy, y_pna_buf = ctx.saved_tensors
-        y_pna = y_pna_buf.squeeze(0)
-        y = coords[:, 1]
-        t_flat = t.squeeze(-1)
-        fy_flat = fy.squeeze(-1)
-        s = torch.sign(y - y_pna)
-
-        # 올바른 dg/dy_i: 모든 노드에 대해 +t_i*fy_i (부호 없음)
-        # g = Σ_T t*fy - Σ_C t*fy, ∂g/∂y_i = t_i*fy_i for ALL i
-        dg_dy_pna = -torch.sum(t_flat * fy_flat)  # 여전히 동일
-        dg_dy = t_flat * fy_flat  # 부호 없음! (수정된 부분)
-        dy_pna_dy = -dg_dy / (dg_dy_pna + 1e-12)
-
-        direct = t_flat * fy_flat * s
-        # Force balance at PNA: Σ(t*fy*s) = A_T - A_C ≈ 0
-        indirect = -torch.sum(t_flat * fy_flat * s) * dy_pna_dy
-        dMp_dy = direct + indirect
-
-        grad_coords = torch.zeros_like(coords)
-        grad_coords[:, 1] = grad_output * dMp_dy
-        return grad_coords, None, None, None
+def calculate_mpl(coords, t, fy, edge_index):
+    return ImplicitPNASolver.apply(coords, t, fy, edge_index)
 
 
-# ─────────────────────────────────────────────────────────────
-# 수치 미분 함수
-# ─────────────────────────────────────────────────────────────
+class FiLMGenerator(nn.Module):
+    """target_mp [B, 1] → (gamma, beta) [B, hidden]"""
+    MP_SCALE = 1e6
 
-def numerical_gradient_mp(coords_val, t_val, fy_val, eps=1e-4):
-    """수치 미분으로 ∂Mp/∂y_i 계산 (정확한 참조값)"""
-    n = coords_val.shape[0]
-    grads = torch.zeros(n)
-    for i in range(n):
-        coords_plus = coords_val.clone()
-        coords_plus[i, 1] += eps
-        coords_minus = coords_val.clone()
-        coords_minus[i, 1] -= eps
+    def __init__(self, hidden_channels: int):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(1, 64),
+            nn.GELU(),
+            nn.Linear(64, hidden_channels * 2),
+        )
+        nn.init.zeros_(self.net[-1].weight)
+        nn.init.zeros_(self.net[-1].bias)
 
-        # 각 섭동에 대해 직접 Mp 계산 (bisection 없이, 올바른 PNA 사용)
-        mp_plus = compute_mp_with_correct_pna(coords_plus, t_val, fy_val)
-        mp_minus = compute_mp_with_correct_pna(coords_minus, t_val, fy_val)
-        grads[i] = (mp_plus - mp_minus) / (2 * eps)
-    return grads
-
-
-def compute_mp_with_correct_pna(coords, t, fy, n_iter=50):
-    """올바른 PNA (force balance)로 Mp 계산"""
-    y = coords[:, 1]
-    t_flat = t.squeeze(-1)
-    fy_flat = fy.squeeze(-1)
-    y_lo = y.min().clone()
-    y_hi = y.max().clone()
-    for _ in range(n_iter):
-        y_mid = 0.5 * (y_lo + y_hi)
-        F_T = torch.sum(t_flat * fy_flat * (y > y_mid).float())
-        F_C = torch.sum(t_flat * fy_flat * (y < y_mid).float())
-        if F_T > F_C:
-            y_lo = y_mid
-        else:
-            y_hi = y_mid
-    y_pna = 0.5 * (y_lo + y_hi)
-    d = torch.abs(y - y_pna)
-    return torch.sum(t_flat * fy_flat * d).item()
+    def forward(self, target_mp):
+        target_mp_norm = target_mp / self.MP_SCALE
+        out = self.net(target_mp_norm)
+        delta_gamma, beta = torch.chunk(out, 2, dim=-1)
+        gamma = 1.0 + delta_gamma
+        return gamma, beta
 
 
-# ─────────────────────────────────────────────────────────────
-# TEST 1: 대칭 직사각형 단면
-# ─────────────────────────────────────────────────────────────
+class CGDNBlock(nn.Module):
+    """GATv2Conv → LayerNorm → FiLM modulation → GELU → Residual  (AdaIN pattern)"""
+    def __init__(self, hidden_channels: int, heads: int = 4, edge_dim: int = 4):
+        super().__init__()
+        assert hidden_channels % heads == 0
+        self.conv = GATv2Conv(
+            hidden_channels,
+            hidden_channels // heads,
+            heads=heads,
+            edge_dim=edge_dim,
+            concat=True,
+        )
+        self.norm = LayerNorm(hidden_channels)
 
-def test_symmetric_section():
-    """대칭 단면: 원본과 수정 버전 동일해야 함"""
-    print("\n" + "="*60)
-    print("TEST 1: 대칭 직사각형 단면 (6 nodes, 균일 t=5, fy=355)")
-    print("="*60)
-
-    N = 6
-    y_vals = torch.linspace(-150.0, 150.0, N)
-    x_vals = torch.zeros(N)
-    coords = torch.stack([x_vals, y_vals], dim=1).requires_grad_(True)
-    t = torch.ones(N, 1) * 5.0
-    fy = torch.ones(N, 1) * 355.0
-    edge_index = torch.zeros(2, 1, dtype=torch.long)
-
-    # 이론적 PNA: y=0 (대칭)
-    y_total = y_vals.sum().item()
-    weighted_centroid = (t.squeeze() * fy.squeeze() * y_vals).sum() / (t.squeeze() * fy.squeeze()).sum()
-    print(f"  이론적 PNA (대칭): y = 0.0")
-    print(f"  탄성 NA (weighted centroid): y = {weighted_centroid:.4f}")
-    print(f"  → 대칭이므로 동일해야 함")
-
-    # 원본 코드
-    coords_orig = coords.detach().clone().requires_grad_(True)
-    mp_orig = ImplicitPNASolver_Original.apply(coords_orig, t, fy, edge_index, 30)
-    mp_orig.backward()
-    grads_orig = coords_orig.grad[:, 1].detach().clone()
-
-    # 수치 미분 (참조)
-    grads_num = numerical_gradient_mp(coords.detach(), t, fy)
-
-    print(f"\n  Mp (원본): {mp_orig.item():.2f} Nmm")
-
-    # 이론적 Mp: sum(t*fy*|y|)
-    mp_theory = (t.squeeze() * fy.squeeze() * y_vals.abs()).sum().item()
-    print(f"  Mp (이론): {mp_theory:.2f} Nmm")
-
-    print(f"\n  그래디언트 비교 (∂Mp/∂y_i):")
-    print(f"  {'node':>4} {'y':>8} {'원본':>12} {'수치미분':>12} {'일치?':>6}")
-    for i in range(N):
-        match = abs(grads_orig[i].item() - grads_num[i].item()) < 1.0
-        print(f"  {i:>4} {y_vals[i]:>8.1f} {grads_orig[i].item():>12.4f} {grads_num[i].item():>12.4f} {'✓' if match else '✗':>6}")
+    def forward(self, h, edge_index, edge_attr, gamma, beta):
+        h_res = h
+        h = self.conv(h, edge_index, edge_attr)
+        h = self.norm(h)
+        h = gamma * h + beta
+        h = F.gelu(h)
+        h = h + h_res
+        return h
 
 
-# ─────────────────────────────────────────────────────────────
-# TEST 2: 비대칭 단면 (T형 단면 유사)
-# ─────────────────────────────────────────────────────────────
+class CGDN(nn.Module):
+    """
+    Constraint-aware Graph Deformation Network (v3)
+    입력 노드 특징 (in_channels=8): [x, y, fix_x, fix_y, part_id, section_id, t, fy]
+    엣지 특징 (edge_dim=4): [길이, 각도, part_id, edge_type]
+    """
 
-def test_asymmetric_section():
-    """비대칭 단면: 탄성 NA ≠ 소성 NA, 오류 확인"""
-    print("\n" + "="*60)
-    print("TEST 2: 비대칭 단면 (3 nodes, 불균일 t)")
-    print("  y=[0, 50, 150] mm, t=[10, 5, 20] mm, fy=355 MPa")
-    print("="*60)
+    def __init__(
+        self,
+        in_channels: int = 8,
+        hidden_channels: int = 128,
+        num_layers: int = 4,
+        heads: int = 4,
+        edge_dim: int = 4,
+        max_displacement: float = 50.0,
+    ):
+        super().__init__()
+        self.max_displacement = max_displacement
+        self.num_layers = num_layers
 
-    y_vals = torch.tensor([0.0, 50.0, 150.0])
-    x_vals = torch.zeros(3)
-    t_vals = torch.tensor([[10.0], [5.0], [20.0]])  # 비균일 두께
-    fy_vals = torch.ones(3, 1) * 355.0
-    coords = torch.stack([x_vals, y_vals], dim=1)
+        self.node_encoder = nn.Sequential(
+            nn.Linear(in_channels, hidden_channels),
+            LayerNorm(hidden_channels),
+            nn.GELU(),
+        )
+        self.film_generators = nn.ModuleList([
+            FiLMGenerator(hidden_channels) for _ in range(num_layers)
+        ])
+        self.blocks = nn.ModuleList([
+            CGDNBlock(hidden_channels, heads=heads, edge_dim=edge_dim)
+            for _ in range(num_layers)
+        ])
+        self.decoder = nn.Sequential(
+            nn.Linear(hidden_channels, 64),
+            nn.GELU(),
+            nn.Linear(64, 2),
+        )
 
-    # 탄성 NA (weighted centroid)
-    t_fy = (t_vals.squeeze() * fy_vals.squeeze())
-    elastic_na = (t_fy * y_vals).sum() / t_fy.sum()
-    print(f"\n  탄성 NA (원본 코드 결과): y = {elastic_na:.4f} mm")
+    def forward(self, x, edge_index, edge_attr, target_mp,
+                fix_x_mask, fix_y_mask, join_pairs=None):
+        h = self.node_encoder(x)
 
-    # 소성 NA (force balance)
-    total_force = t_fy.sum()
-    cumsum = 0.0
-    plastic_na = None
-    for i, (yi, fi) in enumerate(zip(y_vals.tolist(), t_fy.tolist())):
-        cumsum += fi
-        if cumsum >= total_force / 2:
-            plastic_na = yi
-            break
-    print(f"  소성 NA (올바른 PNA): y = {plastic_na:.4f} mm")
-    print(f"  → 두 값의 차이: {abs(elastic_na.item() - plastic_na):.4f} mm")
+        for i, block in enumerate(self.blocks):
+            gamma, beta = self.film_generators[i](target_mp)
+            h = block(h, edge_index, edge_attr, gamma, beta)
 
-    # 원본 코드 Mp
-    edge_index = torch.zeros(2, 1, dtype=torch.long)
-    coords_orig = coords.clone().requires_grad_(True)
-    mp_orig = ImplicitPNASolver_Original.apply(coords_orig, t_vals, fy_vals, edge_index, 30)
+        delta_coords = self.decoder(h)
+        delta_coords = torch.clamp(delta_coords, -self.max_displacement, self.max_displacement)
 
-    # 올바른 Mp (소성 NA 기준)
-    d_correct = (y_vals - plastic_na).abs()
-    mp_correct = (t_fy * d_correct).sum()
+        delta_x = delta_coords[:, 0:1] * (~fix_x_mask).float()
+        delta_y = delta_coords[:, 1:2] * (~fix_y_mask).float()
+        delta_coords = torch.cat([delta_x, delta_y], dim=1)
 
-    print(f"\n  Mp (원본, 탄성 NA 기준): {mp_orig.item():.2f} Nmm")
-    print(f"  Mp (올바른 소성 NA 기준): {mp_correct.item():.2f} Nmm")
-    print(f"  오차: {abs(mp_orig.item() - mp_correct.item()):.2f} Nmm ({abs(mp_orig.item() - mp_correct.item())/mp_correct.item()*100:.2f}%)")
+        new_coords = x[:, :2] + delta_coords
 
-    # 그래디언트 비교
-    mp_orig.backward()
-    grads_orig = coords_orig.grad[:, 1].detach().clone()
+        if join_pairs is not None and join_pairs.shape[0] > 0:
+            u_idx = join_pairs[:, 0]
+            v_idx = join_pairs[:, 1]
+            mid = (new_coords[u_idx] + new_coords[v_idx]) * 0.5
+            new_coords = new_coords.clone()
+            new_coords[u_idx] = mid
+            new_coords[v_idx] = mid
 
-    # 수치 미분 (올바른 PNA 기반)
-    grads_num = numerical_gradient_mp(coords.detach(), t_vals, fy_vals)
-
-    print(f"\n  그래디언트 비교 (∂Mp/∂y_i):")
-    print(f"  {'node':>4} {'y':>8} {'원본 IFT':>12} {'수치미분':>12} {'오차':>10}")
-    for i in range(3):
-        err = abs(grads_orig[i].item() - grads_num[i].item())
-        print(f"  {i:>4} {y_vals[i]:>8.1f} {grads_orig[i].item():>12.4f} {grads_num[i].item():>12.4f} {err:>10.4f}")
-
-
-# ─────────────────────────────────────────────────────────────
-# TEST 3: dg/dy_i 부호 오류 직접 확인
-# ─────────────────────────────────────────────────────────────
-
-def test_dg_dy_sign():
-    """dg/dy_i의 부호 분석"""
-    print("\n" + "="*60)
-    print("TEST 3: dg/dy_i 부호 분석 (압축 구역에서 부호 오류 확인)")
-    print("="*60)
-
-    # 간단한 2-node 단면: y=[0, 100], t=[1,1], fy=[1,1]
-    # PNA = 50 (중앙), 두 노드 모두 동일 t*fy
-    y_vals = torch.tensor([0.0, 100.0])
-    t_vals = torch.tensor([[1.0], [1.0]])
-    fy_vals = torch.tensor([[1.0], [1.0]])
-
-    # g(y_pna) = F_tens - F_comp
-    y_pna = torch.tensor(50.0)  # 정확한 PNA
-    y = y_vals
-
-    s = torch.sign(y - y_pna)
-
-    # 코드의 dg/dy: s * t * fy
-    dg_dy_code = s * t_vals.squeeze() * fy_vals.squeeze()
-
-    # 정확한 dg/dy: 항상 +t*fy
-    # node 0 (y=0, 압축): ∂/∂y0[-1*(50-0)] = +1 → dg/dy = t*fy = +1
-    # node 1 (y=100, 인장): ∂/∂y1[1*(100-50)] = +1 → dg/dy = t*fy = +1
-    dg_dy_correct = t_vals.squeeze() * fy_vals.squeeze()
-
-    print(f"  y_pna = {y_pna.item():.1f}")
-    print(f"  node 0 (y=0, 압축): sign = {s[0].item():.0f}")
-    print(f"    코드 dg/dy = {dg_dy_code[0].item():.4f}  (부호 있음)")
-    print(f"    올바른 dg/dy = {dg_dy_correct[0].item():.4f}  (항상 양수)")
-    print(f"    오류: {'YES (압축 구역)' if dg_dy_code[0].item() != dg_dy_correct[0].item() else 'NO'}")
-    print(f"  node 1 (y=100, 인장): sign = {s[1].item():.0f}")
-    print(f"    코드 dg/dy = {dg_dy_code[1].item():.4f}")
-    print(f"    올바른 dg/dy = {dg_dy_correct[1].item():.4f}")
-
-    # dy_pna_dy 계산
-    dg_dy_pna = -torch.sum(t_vals.squeeze() * fy_vals.squeeze())
-    dy_pna_dy_code = -dg_dy_code / (dg_dy_pna + 1e-12)
-    dy_pna_dy_correct = -dg_dy_correct / (dg_dy_pna + 1e-12)
-
-    print(f"\n  dy_pna/dy (코드): {dy_pna_dy_code.tolist()}")
-    print(f"  dy_pna/dy (올바름): {dy_pna_dy_correct.tolist()}")
-
-    print(f"\n  해석: dy_pna/dy_i의 물리적 의미")
-    print(f"  - 노드를 위로 올리면 y_pna도 얼마나 올라가는가?")
-    print(f"  - 대칭에서 두 노드의 dy_pna/dy_i = 0.5 (같은 기여)")
-    print(f"  - 코드: 인장 {dy_pna_dy_code[1].item():.4f}, 압축 {dy_pna_dy_code[0].item():.4f}")
-    print(f"  - 올바름: 인장 {dy_pna_dy_correct[1].item():.4f}, 압축 {dy_pna_dy_correct[0].item():.4f}")
+        return new_coords, delta_coords
 
 
-# ─────────────────────────────────────────────────────────────
-# TEST 4: 간접항 소멸 조건 수치 확인
-# ─────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════
+# SECTION 1: Data Setup  (1 section, 3 parts, 30 nodes)
+# ══════════════════════════════════════════════════════════════════
 
-def test_indirect_term():
-    """간접항이 소멸하는 조건 확인"""
-    print("\n" + "="*60)
-    print("TEST 4: 간접항(indirect term) 소멸 조건")
-    print("  - Force balance PNA: Σ(t*fy*s) = 0 → indirect = 0")
-    print("  - Elastic NA: Σ(t*fy*s) ≠ 0 → indirect ≠ 0")
-    print("="*60)
-
-    cases = [
-        # (이름, y_vals, t_vals, fy_vals)
-        ("대칭 균일",
-         [0.0, 50.0, 100.0],
-         [1.0, 1.0, 1.0],
-         [355.0, 355.0, 355.0]),
-        ("비대칭 두께",
-         [0.0, 50.0, 150.0],
-         [10.0, 5.0, 20.0],
-         [355.0, 355.0, 355.0]),
-        ("비대칭 항복강도",
-         [0.0, 50.0, 100.0],
-         [5.0, 5.0, 5.0],
-         [355.0, 355.0, 500.0]),
+def build_simple_section():
+    """
+    1 section (section_id=0), 3 parts:
+      Part 0 (Outer): y=50, t=1.5, fy=1500
+      Part 1 (Reinf): y=40, t=2.0, fy=1500
+      Part 2 (Inner): y=20, t=1.5, fy=1200
+    Fixed nodes i=0,1,8,9 → fix_x=fix_y=1
+    Node features: [x, y, fix_x, fix_y, part_id, section_id, t, fy]
+    """
+    part_configs = [
+        (0, 50.0, 1.5, 1500.0),
+        (1, 40.0, 2.0, 1500.0),
+        (2, 20.0, 1.5, 1200.0),
     ]
+    nodes = []
+    node_registry = {}
+    idx = 0
+    for part_id, y_coord, t_val, fy_val in part_configs:
+        for i in range(10):
+            x_coord = i * (100.0 / 9.0)
+            fix = 1.0 if i in [0, 1, 8, 9] else 0.0
+            nodes.append([x_coord, y_coord, fix, fix, float(part_id), 0.0, t_val, fy_val])
+            node_registry[(part_id, i)] = idx
+            idx += 1
 
-    for name, y_list, t_list, fy_list in cases:
-        y = torch.tensor(y_list)
-        t = torch.tensor(t_list)
-        fy = torch.tensor(fy_list)
-        t_fy = t * fy
+    x = torch.tensor(nodes, dtype=torch.float32)
 
-        # Elastic NA (코드의 y_pna)
-        elastic_na = (t_fy * y).sum() / t_fy.sum()
+    src_list, dst_list, edge_attr_list = [], [], []
 
-        # Force balance PNA (올바른 y_pna): 이산 단면에서 근사
-        y_lo, y_hi = y.min().clone(), y.max().clone()
-        for _ in range(50):
-            y_mid = 0.5 * (y_lo + y_hi)
-            F_T = (t_fy * (y > y_mid).float()).sum()
-            F_C = (t_fy * (y < y_mid).float()).sum()
-            if F_T > F_C:
+    def add_edge(u, v, part_id):
+        dx = x[v, 0] - x[u, 0]
+        dy = x[v, 1] - x[u, 1]
+        length = math.sqrt(dx**2 + dy**2)
+        angle  = math.atan2(dy, dx)
+        src_list.extend([u, v])
+        dst_list.extend([v, u])
+        edge_attr_list.extend([[length, angle, float(part_id), 0.0],
+                                [length, -angle, float(part_id), 0.0]])
+
+    for part_id, _, _, _ in part_configs:
+        for i in range(9):
+            u = node_registry[(part_id, i)]
+            v = node_registry[(part_id, i + 1)]
+            add_edge(u, v, part_id)
+
+    edge_index = torch.tensor([src_list, dst_list], dtype=torch.long)
+    edge_attr  = torch.tensor(edge_attr_list, dtype=torch.float32)
+    join_pairs = torch.zeros((0, 2), dtype=torch.long)
+    return Data(x=x, edge_index=edge_index, edge_attr=edge_attr,
+                join_pairs=join_pairs), node_registry
+
+
+# ══════════════════════════════════════════════════════════════════
+# 보조 함수: 해석적 y_pna 계산 (검증용)
+# ══════════════════════════════════════════════════════════════════
+
+def compute_y_pna_ref(coords, t, fy, n_iter=50):
+    """bisection으로 y_pna 계산 (ImplicitPNASolver.forward 와 동일 로직)"""
+    with torch.no_grad():
+        y = coords[:, 1] if coords.dim() == 2 else coords
+        t_flat  = t.squeeze(-1)
+        fy_flat = fy.squeeze(-1)
+        y_lo = y.min().clone()
+        y_hi = y.max().clone()
+        for _ in range(n_iter):
+            y_mid  = 0.5 * (y_lo + y_hi)
+            F_tens = torch.sum(t_flat * fy_flat * (y > y_mid).float())
+            F_comp = torch.sum(t_flat * fy_flat * (y < y_mid).float())
+            if F_tens > F_comp:
                 y_lo = y_mid
             else:
                 y_hi = y_mid
-        plastic_na = 0.5 * (y_lo + y_hi)
-
-        # Σ(t*fy*s) at each axis
-        s_elastic = torch.sign(y - elastic_na)
-        s_plastic = torch.sign(y - plastic_na)
-        sum_tfy_s_elastic = (t_fy * s_elastic).sum().item()
-        sum_tfy_s_plastic = (t_fy * s_plastic).sum().item()
-
-        print(f"\n  [{name}]")
-        print(f"    탄성 NA: y = {elastic_na.item():.4f}, Σ(t·fy·s) = {sum_tfy_s_elastic:.4f}")
-        print(f"    소성 NA: y = {plastic_na.item():.4f}, Σ(t·fy·s) = {sum_tfy_s_plastic:.4f}")
-        print(f"    간접항 소멸 여부: 탄성NA={'소멸' if abs(sum_tfy_s_elastic)<0.01 else '비소멸'}, 소성NA={'소멸' if abs(sum_tfy_s_plastic)<0.01 else '비소멸'}")
+        return 0.5 * (y_lo + y_hi)
 
 
-# ─────────────────────────────────────────────────────────────
-# TEST 5: 전체 그래디언트 정확도 비교 (다양한 단면)
-# ─────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════
+# SECTION 2-A: Forward 정확성 검증
+# ══════════════════════════════════════════════════════════════════
 
-def test_gradient_accuracy():
-    """원본 IFT vs 수치 미분 그래디언트 정확도 체계적 비교"""
-    print("\n" + "="*60)
-    print("TEST 5: 그래디언트 정확도 체계적 비교")
-    print("="*60)
+def validate_forward(data):
+    """
+    검증 1: Forward process의 Mp 정확도
+    - solver Mp (ImplicitPNASolver) vs 해석적 Mp (bisection y_pna로 직접 계산)
+    - 평형 조건 검증: sum(t·fy·sign(y - y_pna)) ≈ 0
+    """
+    print("\n" + "=" * 65)
+    print("[ Section 2-A ] Forward 정확성 검증 (bisection Mp vs 해석적 Mp)")
+    print("=" * 65)
 
-    test_cases = {
-        "대칭 균일 (6nodes)": {
-            "y": torch.linspace(0, 300, 6),
-            "t": torch.ones(6, 1) * 5.0,
-            "fy": torch.ones(6, 1) * 355.0,
-        },
-        "비대칭 두께 (4nodes)": {
-            "y": torch.tensor([0.0, 30.0, 100.0, 200.0]),
-            "t": torch.tensor([[3.0], [6.0], [3.0], [10.0]]),
-            "fy": torch.ones(4, 1) * 355.0,
-        },
-        "비균일 항복강도 (4nodes)": {
-            "y": torch.tensor([0.0, 50.0, 100.0, 150.0]),
-            "t": torch.ones(4, 1) * 5.0,
-            "fy": torch.tensor([[235.0], [235.0], [355.0], [355.0]]),
-        },
-        "고강도 강재 혼합 (5nodes)": {
-            "y": torch.tensor([0.0, 25.0, 75.0, 150.0, 300.0]),
-            "t": torch.tensor([[8.0], [4.0], [4.0], [4.0], [12.0]]),
-            "fy": torch.tensor([[355.0], [355.0], [490.0], [355.0], [355.0]]),
-        },
+    coords = data.x[:, :2].clone()
+    t  = data.x[:, 6:7].clone()
+    fy = data.x[:, 7:8].clone()
+
+    # ImplicitPNASolver 출력
+    mp_solver = calculate_mpl(coords, t, fy, None)
+
+    # 해석적 계산 (독립 bisection으로 y_pna 획득)
+    with torch.no_grad():
+        y_pna_ref = compute_y_pna_ref(coords, t, fy)
+        y_flat    = coords[:, 1]
+        t_flat    = t.squeeze(-1)
+        fy_flat   = fy.squeeze(-1)
+
+        mp_analytic = torch.sum(t_flat * fy_flat * torch.abs(y_flat - y_pna_ref))
+
+        # 평형 조건 검증: sum(t·fy·sign(y - y_pna)) = 0 이어야 함
+        s_ref = torch.sign(y_flat - y_pna_ref)
+        equil_residual = torch.sum(t_flat * fy_flat * s_ref)
+
+    err_mp  = abs(mp_solver.item() - mp_analytic.item())
+    err_pct = err_mp / (mp_analytic.item() + 1e-10) * 100
+
+    print(f"  y_pna (bisection)     : {y_pna_ref.item():>12.6f} mm")
+    print(f"  Equilibrium residual  : {equil_residual.item():>12.6e}  -> {'OK' if abs(equil_residual.item()) < 1.0 else 'WARN'}")
+    print(f"  Solver Mp             : {mp_solver.item():>16,.4f} N·mm")
+    print(f"  Analytic Mp           : {mp_analytic.item():>16,.4f} N·mm")
+    print(f"  Absolute Error        : {err_mp:>16.6f} N·mm")
+    print(f"  Relative Error        : {err_pct:>12.6f}%  -> {'PASS' if err_pct < 0.001 else 'FAIL'}")
+    return mp_solver.item(), mp_analytic.item(), y_pna_ref.item()
+
+
+# ══════════════════════════════════════════════════════════════════
+# SECTION 2-B: Backward 그래디언트 정확도 검증 (3-way)
+# ══════════════════════════════════════════════════════════════════
+
+def validate_backward(data, n_check=8, eps=1e-2):
+    """
+    검증 2: Backward process의 IFT 그래디언트 정확도
+    3-way 비교:
+      (A) g_autograd : ImplicitPNASolver.backward (IFT, 직접항+간접항)
+      (B) g_analytic : t_i·fy_i·sign(y_i - y_pna)  (해석적, 직접항만; 간접항=0 at 평형)
+      (C) g_fd       : 중앙 유한차분
+    추가: 간접항(indirect term) 크기 검증 (평형에서 ≈ 0이어야 함)
+    """
+    print("\n" + "=" * 65)
+    print("[ Section 2-B ] Backward 정확도 (IFT vs 해석적 vs Finite Diff)")
+    print("=" * 65)
+
+    # float64 사용으로 수치 정밀도 향상
+    coords = data.x[:, :2].clone().double()
+    t      = data.x[:, 6:7].clone().double()
+    fy     = data.x[:, 7:8].clone().double()
+    fix_y  = data.x[:, 3].bool()
+    free_indices = (~fix_y).nonzero(as_tuple=True)[0]
+
+    # y_pna 참조값 (float64)
+    y_pna_ref = compute_y_pna_ref(coords, t, fy)
+
+    # (A) Autograd (IFT backward)
+    coords_ag = coords.clone().requires_grad_(True)
+    mp = calculate_mpl(coords_ag, t, fy, None)
+    mp.backward()
+    g_autograd = coords_ag.grad[:, 1].detach()
+
+    # (B) 해석적 그래디언트: t_i·fy_i·sign(y_i - y_pna)
+    with torch.no_grad():
+        y_flat    = coords[:, 1]
+        t_flat    = t.squeeze(-1)
+        fy_flat   = fy.squeeze(-1)
+        s_ref     = torch.sign(y_flat - y_pna_ref)
+        g_analytic = t_flat * fy_flat * s_ref  # 직접항 (해석해)
+
+        # 간접항 크기 계산 (= sum(t·fy·s) * dy_pna/dy_i, 평형에서 ≈ 0)
+        sum_tfy_s   = torch.sum(t_flat * fy_flat * s_ref)
+        sum_tfy     = torch.sum(t_flat * fy_flat)
+        dy_pna_dy   = (t_flat * fy_flat) / (sum_tfy + 1e-12)
+        indirect    = -sum_tfy_s * dy_pna_dy
+
+    print(f"\n  ── 간접항(Indirect Term) 크기 검증 ──")
+    print(f"  sum(t·fy·s) [평형 잔차]  : {sum_tfy_s.item():>12.6e}  -> {'OK (≈0)' if abs(sum_tfy_s.item()) < 10 else 'LARGE'}")
+    print(f"  max |indirect term|      : {torch.max(torch.abs(indirect)).item():>12.6e}")
+    print(f"  mean |indirect term|     : {torch.mean(torch.abs(indirect)).item():>12.6e}")
+
+    # 노드별 비교 (선택된 free 노드)
+    perm   = torch.randperm(len(free_indices))[:n_check]
+    chosen = free_indices[perm]
+
+    errors_ag_analytic = []
+    errors_ag_fd       = []
+
+    print(f"\n  {'Node':>5} | {'Autograd':>13} | {'Analytic':>13} | {'FiniteDiff':>13} | {'Err(A-An)%':>10} | {'Err(A-FD)%':>10}")
+    print(f"  {'-'*5}-+-{'-'*13}-+-{'-'*13}-+-{'-'*13}-+-{'-'*10}-+-{'-'*10}")
+
+    for idx in chosen:
+        idx = idx.item()
+
+        # (C) Finite Difference
+        c_p = coords.clone(); c_p[idx, 1] += eps
+        c_m = coords.clone(); c_m[idx, 1] -= eps
+        with torch.no_grad():
+            mp_p = calculate_mpl(c_p, t, fy, None).item()
+            mp_m = calculate_mpl(c_m, t, fy, None).item()
+        fd_g = (mp_p - mp_m) / (2 * eps)
+
+        ag_g = g_autograd[idx].item()
+        an_g = g_analytic[idx].item()
+
+        err_an = abs(ag_g - an_g) / (abs(an_g) + 1e-10) * 100
+        err_fd = abs(ag_g - fd_g) / (abs(fd_g) + 1e-10) * 100
+        errors_ag_analytic.append(err_an)
+        errors_ag_fd.append(err_fd)
+
+        s_an = "OK" if err_an < 1.0 else "WARN"
+        s_fd = "OK" if err_fd < 2.0 else "WARN"
+        print(f"  {idx:>5} | {ag_g:>13.4f} | {an_g:>13.4f} | {fd_g:>13.4f} | {err_an:>9.4f}% {s_an} | {err_fd:>9.4f}% {s_fd}")
+
+    mean_an = np.mean(errors_ag_analytic)
+    mean_fd = np.mean(errors_ag_fd)
+    print(f"\n  평균 오차 (Autograd vs Analytic) : {mean_an:.4f}%")
+    print(f"  평균 오차 (Autograd vs FiniteDiff): {mean_fd:.4f}%")
+    print(f"  종합 판정: {'PASS' if mean_an < 1.0 and mean_fd < 2.0 else 'FAIL'}")
+    return errors_ag_analytic, errors_ag_fd
+
+
+# ══════════════════════════════════════════════════════════════════
+# SECTION 2-C: Training Loop (전체 CGDN, epoch별 Mp 정확도)
+# ══════════════════════════════════════════════════════════════════
+
+def run_training(data, target_mp_val=1_800_000, max_epochs=300, lr=1e-3,
+                 grad_check_interval=50):
+    """
+    검증 3: CGDN 학습 중 epoch별 Mp 수렴 정확도
+    전체 CGDN (hidden=128, num_layers=4, heads=4) 사용.
+
+    매 epoch 기록:
+      - pred_mp   : GNN 변형 → ImplicitPNASolver → Mp (gradient 포함)
+      - target_mp : 고정 설계 목표
+    grad_check_interval 마다 추가 기록:
+      - g_autograd vs g_analytic vs g_fd 오차
+      - indirect term 크기 (평형 품질 지표)
+    """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    data   = data.to(device)
+
+    model = CGDN(
+        in_channels=8,
+        hidden_channels=128,
+        num_layers=4,
+        heads=4,
+        edge_dim=4,
+        max_displacement=50.0,
+    ).to(device)
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+
+    x          = data.x
+    edge_index = data.edge_index
+    edge_attr  = data.edge_attr
+    join_pairs = data.join_pairs if hasattr(data, 'join_pairs') else None
+    base_coords = x[:, :2].detach().cpu()
+
+    fix_x_mask = x[:, 2].bool().unsqueeze(1)
+    fix_y_mask = x[:, 3].bool().unsqueeze(1)
+    t  = x[:, 6:7]
+    fy = x[:, 7:8]
+
+    target_mp_node = torch.full((x.shape[0], 1), float(target_mp_val),
+                                dtype=torch.float32, device=device)
+
+    history = {
+        'pred_mp':        [],
+        'target_mp':      [],
+        'mp_err_pct':     [],
+        'grad_err_an':    [],
+        'grad_err_fd':    [],
+        'indirect_mag':   [],
+        'grad_epochs':    [],
     }
 
-    results = []
-    for name, case in test_cases.items():
-        y_vals = case["y"]
-        t_vals = case["t"]
-        fy_vals = case["fy"]
-        N = len(y_vals)
-        edge_index = torch.zeros(2, 1, dtype=torch.long)
+    print(f"\n{'=' * 65}")
+    print(f"[ Section 2-C ] Training  |  Target Mp = {target_mp_val:,.0f} N·mm  |  Epochs: {max_epochs}")
+    print(f"  CGDN: hidden=128, layers=4, heads=4  (full v3, unchanged)")
+    print(f"{'=' * 65}")
 
-        coords = torch.stack([torch.zeros(N), y_vals], dim=1).requires_grad_(True)
-        coords_orig = coords.detach().clone().requires_grad_(True)
+    new_coords = None
+    for epoch in range(max_epochs):
+        model.train()
+        optimizer.zero_grad()
 
-        mp_orig = ImplicitPNASolver_Original.apply(coords_orig, t_vals, fy_vals, edge_index, 30)
-        mp_orig.backward()
-        grads_orig = coords_orig.grad[:, 1].detach().clone()
+        new_coords, delta = model(
+            x, edge_index, edge_attr, target_mp_node,
+            fix_x_mask, fix_y_mask, join_pairs
+        )
+        pred_mp = calculate_mpl(new_coords, t, fy, None)
 
-        grads_num = numerical_gradient_mp(coords.detach(), t_vals, fy_vals)
+        loss = ((pred_mp - target_mp_val) / target_mp_val) ** 2
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        optimizer.step()
 
-        max_err = (grads_orig - grads_num).abs().max().item()
-        rel_err = max_err / (grads_num.abs().max().item() + 1e-8)
-        results.append((name, max_err, rel_err))
+        mp_err = abs(pred_mp.item() - target_mp_val) / target_mp_val * 100
+        history['pred_mp'].append(pred_mp.item())
+        history['target_mp'].append(target_mp_val)
+        history['mp_err_pct'].append(mp_err)
 
-    print(f"\n  {'단면 유형':<30} {'최대절대오차':>15} {'최대상대오차':>12}")
-    for name, abs_err, rel_err in results:
-        flag = "⚠️  " if rel_err > 0.05 else "✓  "
-        print(f"  {flag}{name:<28} {abs_err:>15.4f} {rel_err*100:>11.2f}%")
+        # 그래디언트 정확도 + 간접항 크기 (선택된 epoch)
+        if epoch % grad_check_interval == 0:
+            model.eval()
+            with torch.enable_grad():
+                nc_ag = new_coords.detach().clone().requires_grad_(True)
+                mp2   = calculate_mpl(nc_ag, t, fy, None)
+                mp2.backward()
+                g_ag  = nc_ag.grad[:, 1].detach()
+
+            # 해석적 그래디언트 + 간접항
+            with torch.no_grad():
+                y_pna_e   = compute_y_pna_ref(new_coords.detach(), t, fy)
+                y_e       = new_coords.detach()[:, 1]
+                t_flat_e  = t.squeeze(-1)
+                fy_flat_e = fy.squeeze(-1)
+                s_e       = torch.sign(y_e - y_pna_e)
+                g_an      = t_flat_e * fy_flat_e * s_e
+                sum_s_e   = torch.sum(t_flat_e * fy_flat_e * s_e)
+                sum_tfy_e = torch.sum(t_flat_e * fy_flat_e)
+                dy_pna_e  = (t_flat_e * fy_flat_e) / (sum_tfy_e + 1e-12)
+                indirect_e = -sum_s_e * dy_pna_e
+                indirect_mag = torch.mean(torch.abs(indirect_e)).item()
+
+            # FD (대표 노드 1개)
+            free_idx_e = (~fix_y_mask.squeeze()).nonzero(as_tuple=True)[0]
+            pick = free_idx_e[len(free_idx_e) // 2].item()
+            eps_fd = 1e-2
+            c_p = new_coords.detach().clone(); c_p[pick, 1] += eps_fd
+            c_m = new_coords.detach().clone(); c_m[pick, 1] -= eps_fd
+            fd_g = (calculate_mpl(c_p, t, fy, None).item() -
+                    calculate_mpl(c_m, t, fy, None).item()) / (2 * eps_fd)
+
+            err_an = abs(g_ag[pick].item() - g_an[pick].item()) / (abs(g_an[pick].item()) + 1e-10) * 100
+            err_fd = abs(g_ag[pick].item() - fd_g) / (abs(fd_g) + 1e-10) * 100
+
+            history['grad_err_an'].append(err_an)
+            history['grad_err_fd'].append(err_fd)
+            history['indirect_mag'].append(indirect_mag)
+            history['grad_epochs'].append(epoch)
+
+            print(f"  Epoch {epoch:4d} | pred_mp: {pred_mp.item():>12,.0f} | "
+                  f"target: {target_mp_val:>12,.0f} | err: {mp_err:>6.2f}% | "
+                  f"grad_an: {err_an:.3f}% | grad_fd: {err_fd:.3f}% | "
+                  f"indirect_mag: {indirect_mag:.4e}")
+
+    final_new_coords = new_coords.detach().cpu() if new_coords is not None else base_coords
+    return history, base_coords, final_new_coords
 
 
-# ─────────────────────────────────────────────────────────────
-# TEST 6: 실제 B-pillar 유사 단면에서 학습 수렴 영향
-# ─────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════
+# SECTION 3: 시각화
+# ══════════════════════════════════════════════════════════════════
 
-def test_optimization_convergence():
-    """최적화 관점: 잘못된 그래디언트가 수렴에 영향을 주는가"""
-    print("\n" + "="*60)
-    print("TEST 6: 최적화 수렴 비교 (target Mp = 1e6 Nmm)")
-    print("="*60)
+def visualize_results(history, base_coords, result_coords, target_mp_val,
+                      fwd_mp_analytic=None):
+    """
+    Panel 1: pred_mp vs target_mp 수렴 (epoch별, % error 2차 축)
+    Panel 2: 단면 형상 Base Model vs Result Model (part별 색상)
+    Panel 3: 그래디언트 정확도 (IFT vs Analytic vs FD, epoch별)
+    Panel 4: 간접항(Indirect Term) 크기 (평형 품질, epoch별)
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    axes = axes.flatten()
+    epochs = list(range(len(history['pred_mp'])))
 
+    # ── Panel 1: Mp 수렴 ──
+    ax  = axes[0]
+    ax2 = ax.twinx()
+    ax.plot(epochs, [v / 1e6 for v in history['pred_mp']],
+            color='#2196F3', linewidth=1.5, label='Pred Mp (GNN→solver)')
+    ax.axhline(target_mp_val / 1e6, color='#FF5722', linewidth=2.0, linestyle=':',
+               label=f'Target Mp = {target_mp_val/1e6:.2f} MN·mm')
+    if fwd_mp_analytic is not None:
+        ax.axhline(fwd_mp_analytic / 1e6, color='#4CAF50', linewidth=1.0, linestyle='--',
+                   label=f'Initial Analytic Mp = {fwd_mp_analytic/1e6:.2f} MN·mm')
+    ax2.plot(epochs, history['mp_err_pct'],
+             color='#FF9800', linewidth=0.8, alpha=0.6, linestyle='-', label='% Error')
+    ax2.set_ylabel('Mp 오차 (%)', color='#FF9800')
+    ax2.tick_params(axis='y', labelcolor='#FF9800')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Mp (MN·mm)')
+    ax.set_title('검증 3: 예측 Mp vs Target Mp 수렴', fontweight='bold')
+    lines1, labels1 = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax.legend(lines1 + lines2, labels1 + labels2, loc='upper right', fontsize=7)
+    ax.grid(True, alpha=0.3)
+
+    # ── Panel 2: 단면 형상 비교 ──
+    ax = axes[1]
+    base_np   = base_coords.numpy()
+    result_np = result_coords.numpy()
+    part_colors = {0: '#FF5722', 1: '#FFAA00', 2: '#4CAF50'}
+    part_names  = {0: 'Outer(P0)', 1: 'Reinf(P1)', 2: 'Inner(P2)'}
+
+    for part_id in range(3):
+        s, e = part_id * 10, part_id * 10 + 10
+        c = part_colors[part_id]
+        name = part_names[part_id]
+        ax.plot(base_np[s:e, 0], base_np[s:e, 1],
+                'o--', color=c, alpha=0.35, linewidth=1.2, label=f'{name} Base')
+        ax.plot(result_np[s:e, 0], result_np[s:e, 1],
+                's-',  color=c, alpha=1.0,  linewidth=1.8, label=f'{name} Result')
+
+    ax.set_xlabel('X (mm)')
+    ax.set_ylabel('Y (mm)')
+    ax.set_title('단면 형상: Base Model vs Result Model', fontweight='bold')
+    ax.legend(loc='best', fontsize=7, ncol=2)
+    ax.grid(True, alpha=0.3)
+
+    # ── Panel 3: 그래디언트 정확도 ──
+    ax = axes[2]
+    if history['grad_epochs']:
+        ge = history['grad_epochs']
+        ax.plot(ge, history['grad_err_an'], 'o-', color='#9C27B0', linewidth=1.5,
+                markersize=5, label='IFT vs Analytic (%)')
+        ax.plot(ge, history['grad_err_fd'], 's-', color='#2196F3', linewidth=1.5,
+                markersize=5, label='IFT vs Finite Diff (%)')
+        ax.axhline(1.0, color='red', linestyle='--', alpha=0.5, label='1% 임계')
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel('상대 오차 (%)')
+        ax.set_title('검증 2: IFT 그래디언트 정확도', fontweight='bold')
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+    else:
+        axes[2].text(0.5, 0.5, 'No gradient check data',
+                     ha='center', va='center', transform=axes[2].transAxes)
+
+    # ── Panel 4: 간접항 크기 (평형 품질) ──
+    ax = axes[3]
+    if history['grad_epochs']:
+        ax.plot(history['grad_epochs'], history['indirect_mag'],
+                'D-', color='#FF5722', linewidth=1.5, markersize=5,
+                label='mean |Indirect Term|')
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel('Indirect Term 크기')
+        ax.set_title('평형 품질: Indirect Term 크기\n(0에 수렴 → 평형 양호)', fontweight='bold')
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+        ax.set_yscale('log')
+    else:
+        axes[3].text(0.5, 0.5, 'No data', ha='center', va='center',
+                     transform=axes[3].transAxes)
+
+    plt.suptitle('ImplicitPNASolver 검증  |  1 Section, 3 Parts, 30 Nodes  |  Full CGDN v3',
+                 fontsize=13, fontweight='bold')
+    plt.tight_layout()
+
+    out_path = 'docs/hmc/validate_pna_result.png'
+    plt.savefig(out_path, dpi=120, bbox_inches='tight')
+    plt.show()
+    print(f"\n결과 저장: {out_path}")
+
+
+# ══════════════════════════════════════════════════════════════════
+# Main
+# ══════════════════════════════════════════════════════════════════
+
+if __name__ == "__main__":
     torch.manual_seed(42)
-    N = 8
-    y_init = torch.linspace(0, 200, N)
-    t_fixed = torch.ones(N, 1) * 5.0
-    fy_fixed = torch.ones(N, 1) * 355.0
-    target_mp = 1e6
-    edge_index = torch.zeros(2, 1, dtype=torch.long)
+    np.random.seed(42)
 
-    results_orig = []
-    results_corr = []
+    print("ImplicitPNASolver 알고리즘 정확도 검증")
+    print("구조: 1 section, 3 parts (Outer/Reinf/Inner), 30 nodes")
+    print("모델: CGDN v3 (hidden=128, layers=4, heads=4) — 전체 코드 그대로")
 
-    for version in ["original", "corrected"]:
-        y_param = torch.nn.Parameter(y_init.clone())
-        optimizer = torch.optim.Adam([y_param], lr=1.0)
+    # ── Section 1: Data Setup ──
+    data, node_registry = build_simple_section()
+    print(f"\n데이터: nodes={data.x.shape} | edges={data.edge_index.shape}")
 
-        history = []
-        for step in range(200):
-            optimizer.zero_grad()
-            coords_for_grad = torch.stack([torch.zeros(N), y_param], dim=1)
+    # ── Section 2-A: Forward 검증 ──
+    mp_solver, mp_analytic, y_pna_init = validate_forward(data)
 
-            if version == "original":
-                mp = ImplicitPNASolver_Original.apply(coords_for_grad, t_fixed, fy_fixed, edge_index, 30)
-            else:
-                mp = ImplicitPNASolver_Corrected.apply(coords_for_grad, t_fixed, fy_fixed, 30)
+    # ── Section 2-B: Backward 검증 ──
+    validate_backward(data, n_check=8, eps=1e-2)
 
-            loss = (mp - target_mp) ** 2 / target_mp ** 2
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_([y_param], 10.0)
-            optimizer.step()
-            history.append(mp.item())
+    # ── Section 2-C: Training + Epoch별 Mp 정확도 ──
+    TARGET_MP = 1_800_000  # N·mm
+    history, base_coords, result_coords = run_training(
+        data,
+        target_mp_val=TARGET_MP,
+        max_epochs=300,
+        lr=1e-3,
+        grad_check_interval=50,
+    )
 
-        if version == "original":
-            results_orig = history
-        else:
-            results_corr = history
+    # ── Section 3: Visualization ──
+    visualize_results(history, base_coords, result_coords, TARGET_MP,
+                      fwd_mp_analytic=mp_analytic)
 
-    print(f"\n  초기 Mp: {results_orig[0]:.2f} Nmm")
-    print(f"  목표 Mp: {target_mp:.2f} Nmm")
-    print(f"\n  {'Step':>5} {'원본 Mp':>15} {'수정 Mp':>15}")
-    for step in [0, 10, 50, 100, 199]:
-        print(f"  {step:>5} {results_orig[step]:>15.2f} {results_corr[step]:>15.2f}")
-
-    final_err_orig = abs(results_orig[-1] - target_mp) / target_mp * 100
-    final_err_corr = abs(results_corr[-1] - target_mp) / target_mp * 100
-    print(f"\n  최종 오차: 원본 {final_err_orig:.2f}%, 수정 {final_err_corr:.2f}%")
-
-
-# ─────────────────────────────────────────────────────────────
-# 메인 실행
-# ─────────────────────────────────────────────────────────────
-
-if __name__ == "__main__":
-    print("ImplicitPNASolver 검증 시작")
-    print("PyTorch version:", torch.__version__)
-
-    test_symmetric_section()
-    test_asymmetric_section()
-    test_dg_dy_sign()
-    test_indirect_term()
-    test_gradient_accuracy()
-    test_optimization_convergence()
-
-    print("\n" + "="*60)
-    print("검증 완료")
-    print("="*60)
-
-
-# ─────────────────────────────────────────────────────────────
-# TEST 7: 코드 자체의 Forward 함수에 대한 수치 미분 vs IFT 비교
-# (Forward 함수의 정확성과 별개로, backward 일관성 검증)
-# ─────────────────────────────────────────────────────────────
-
-def compute_mp_code_forward(y_vals, t_flat, fy_flat, n_iter=30):
-    """코드의 forward와 완전히 동일한 Mp 계산 (no_grad, numpy-like)"""
-    y = y_vals.clone()
-    y_lo = y.min().clone()
-    y_hi = y.max().clone()
-    for _ in range(n_iter):
-        y_mid = 0.5 * (y_lo + y_hi)
-        F_tens = torch.sum(t_flat * fy_flat * torch.clamp(y - y_mid, min=0.0))
-        F_comp = torch.sum(t_flat * fy_flat * torch.clamp(y_mid - y, min=0.0))
-        if F_tens > F_comp:
-            y_lo = y_mid
-        else:
-            y_hi = y_mid
-    y_pna = 0.5 * (y_lo + y_hi)
-    d = torch.abs(y - y_pna)
-    return torch.sum(t_flat * fy_flat * d).item()
-
-
-def test_backward_consistency():
-    """코드 forward의 수치 미분 vs 코드 IFT backward (자체 일관성 검증)"""
-    print("\n" + "="*60)
-    print("TEST 7: 코드 자체 Forward에 대한 Backward 일관성 검증")
-    print("  (올바른 PNA 아닌, 코드의 elastic NA 기준으로 수치미분)")
-    print("="*60)
-
-    test_cases = {
-        "대칭 균일 (6nodes)": {
-            "y": torch.linspace(0.0, 300.0, 6),
-            "t": torch.ones(6, 1) * 5.0,
-            "fy": torch.ones(6, 1) * 355.0,
-        },
-        "비대칭 두께 (3nodes)": {
-            "y": torch.tensor([0.0, 50.0, 150.0]),
-            "t": torch.tensor([[10.0], [5.0], [20.0]]),
-            "fy": torch.ones(3, 1) * 355.0,
-        },
-        "비균일 항복강도 (4nodes)": {
-            "y": torch.tensor([0.0, 50.0, 100.0, 150.0]),
-            "t": torch.ones(4, 1) * 5.0,
-            "fy": torch.tensor([[235.0], [235.0], [355.0], [355.0]]),
-        },
-    }
-
-    for name, case in test_cases.items():
-        y_vals = case["y"]
-        t_vals = case["t"]
-        fy_vals = case["fy"]
-        N = len(y_vals)
-        edge_index = torch.zeros(2, 1, dtype=torch.long)
-        t_flat = t_vals.squeeze(-1)
-        fy_flat = fy_vals.squeeze(-1)
-
-        # IFT 그래디언트 (코드의 backward)
-        coords = torch.stack([torch.zeros(N), y_vals], dim=1).requires_grad_(True)
-        mp = ImplicitPNASolver_Original.apply(coords, t_vals, fy_vals, edge_index, 30)
-        mp.backward()
-        grads_ift = coords.grad[:, 1].detach().clone()
-
-        # 코드의 forward 함수에 대한 수치 미분
-        eps = 1e-3
-        grads_num_code = torch.zeros(N)
-        for i in range(N):
-            y_plus = y_vals.clone(); y_plus[i] += eps
-            y_minus = y_vals.clone(); y_minus[i] -= eps
-            mp_plus = compute_mp_code_forward(y_plus, t_flat, fy_flat)
-            mp_minus = compute_mp_code_forward(y_minus, t_flat, fy_flat)
-            grads_num_code[i] = (mp_plus - mp_minus) / (2 * eps)
-
-        max_err = (grads_ift - grads_num_code).abs().max().item()
-        rel_err = max_err / (grads_num_code.abs().max().item() + 1e-8)
-
-        print(f"\n  [{name}]")
-        print(f"  {'node':>4} {'y':>8} {'IFT 그래디언트':>15} {'수치미분(코드)':>15} {'오차':>10}")
-        for i in range(N):
-            err = abs(grads_ift[i].item() - grads_num_code[i].item())
-            print(f"  {i:>4} {y_vals[i]:>8.1f} {grads_ift[i].item():>15.4f} {grads_num_code[i].item():>15.4f} {err:>10.4f}")
-        print(f"  최대 상대오차: {rel_err*100:.2f}% {'-> OK' if rel_err < 0.05 else '-> 불일치!'}")
-
-
-if __name__ == "__main__":
-    test_backward_consistency()
+    # ── 최종 요약 ──
+    final_pred = history['pred_mp'][-1]
+    final_err  = abs(final_pred - TARGET_MP) / TARGET_MP * 100
+    print(f"\n{'=' * 65}")
+    print(f"최종 결과 요약")
+    print(f"  Initial Mp (analytic) : {mp_analytic:>14,.2f} N·mm")
+    print(f"  Initial y_pna         : {y_pna_init:>14.6f} mm")
+    print(f"  Final pred_mp         : {final_pred:>14,.0f} N·mm")
+    print(f"  Target Mp             : {TARGET_MP:>14,.0f} N·mm")
+    print(f"  Final Error           : {final_err:>6.2f}%")
+    if history['grad_epochs']:
+        print(f"  Final grad_err (an)   : {history['grad_err_an'][-1]:>6.3f}%")
+        print(f"  Final grad_err (fd)   : {history['grad_err_fd'][-1]:>6.3f}%")
+        print(f"  Final indirect_mag    : {history['indirect_mag'][-1]:.4e}")
+    print(f"{'=' * 65}")

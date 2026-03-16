@@ -5,6 +5,7 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{amsmath}
+\usepackage{xcolor}
 \usepackage{kotex}
 \allowdisplaybreaks
 
@@ -25,334 +26,195 @@
 \vspace{12pt}
 $
 \begin{aligned}
-    &\mathbf{X}: \text{Random data set}\\
-    &\mathbf{x_i}: \text{$i$th dimension random vector}\\
-    &\mathbf{d}: \text{mean vector of Random data set $\mathbf{X}$}\\
-    &d_i: \text{$i$th mean of Random vector}\\
-    &\mathbf{u}: \text{normalized vector of random data set $\mathbf{X}$}\\
-    &S_{\mathbf{X}}(\mathbf{x}) \triangleq \nabla_{\mathbf{x}} \log p(\mathbf{x}): \text{Score function w.r.t. } \mathbf{X}\\
-    &S_{\mathbf{d}}(\mathbf{x}) \triangleq \nabla_{\mathbf{d}} \log p(\mathbf{x};\mathbf{d}): \text{Score function w.r.t. design variable } \mathbf{d}\\
+    &\mathbb{N}, \mathbb{N}_0, \mathbb{R}, \mathbb{R}_0^+: \text{Sets of positive integers, non-negative integers, real, and non-negative real numbers} \\
+    &M\in\mathbb{N}, N\in\mathbb{N}\\
+    &\mathbf{X} = [X_1, \dots, X_N]^T: (\Omega_\mathbf{d},\mathcal{F}_\mathbf{d})\rightarrow (\mathbb{A}^N,\mathcal{B}^N)\: \text{where }A_N \subseteq \mathbb{R}^N, \mathcal{B}^N:\text{Borel $\sigma$-field on}\:\mathbb{A}^N) \\
+    &X_k: \text{random variable}\\
+    &\mathbf{d} = [d_1, \dots, d_M]^T: \text{$M$-dimensional design vector in closed set $\mathcal{D} \subset \mathbb{R}^M$} \\
+    &d_k = \mathbb{E}[X_k]: \text{Design variable defined as the mean of random variable $X_k$} \\
+    &f_{\mathbf{X}}(\mathbf{x}; \mathbf{d}): \text{Joint probability density function (PDF) of}\:\mathbf{X}\text{ where }\mathbf{x}\in\mathbb{R}^N,\mathbf{d}\in \mathcal{D}\\
 \end{aligned}
 $
 
 % =======================================================
 % Section2. Change of variable Technique
 % =======================================================
-
-\section{Change of variable Technique}
-
-\subsection{Scale Family (Scaling)}
-
-A distribution belongs to the \textbf{scale family} if it satisfies:
-\[
-    X = d \cdot Z, \quad Z \sim p_0, \quad E[Z] = 1
-\]
-so that $E[X] = d$. The density takes the form:
-\[
-    p(x;\, d) = \frac{1}{d}\, p_0\!\left(\frac{x}{d}\right).
-\]
-
-\textbf{SST Derivation (Univariate):}
-
-\begin{equation}
-    \begin{aligned}
-        &\log p(x;\,d) = -\log d + \log p_0\!\left(\frac{x}{d}\right) \\[6pt]
-        &S_d(x) = \frac{\partial}{\partial d}\log p(x;\,d) = -\frac{1}{d}
-            + \underbrace{\frac{p_0'(x/d)}{p_0(x/d)}}_{=\,S_{p_0}(x/d)} \cdot \left(-\frac{x}{d^2}\right)\\[6pt]
-        &\text{Since } S_X(x) = \frac{\partial}{\partial x}\log p(x;\,d) = \frac{1}{d} S_{p_0}\!\left(\frac{x}{d}\right),
-            \text{ we have } S_{p_0}(x/d) = d\cdot S_X(x).\\[6pt]
-        &\boxed{S_d(x) = -\frac{1}{d}\bigl(1 + x\cdot S_X(x)\bigr)}
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\noindent The formula has two physically distinct components:
-\begin{center}
-\begin{tabular}{lll}
-\hline
-\textbf{Component} & \textbf{Expression} & \textbf{Origin} \\
-\hline
-Jacobian (Volume) & $-1/d$ & Probability conservation under scaling \\
-Shape (Chain Rule) & $-(x/d)\cdot S_X(x)$ & Shift of argument $x/d$ in base density \\
-\hline
-\end{tabular}
-\end{center}
-
-\textbf{Multivariate Extension} ($\mathbf{X}, \mathbf{d} \in \mathbb{R}^n$, $D = \mathrm{diag}(\mathbf{d})$):
-
-\begin{equation}
-    \begin{aligned}
-        &p_{\mathbf{X}}(\mathbf{x};\mathbf{d}) = \frac{1}{\prod_{i=1}^{n}d_i}\cdot p_{0}(\mathbf{x}\oslash \mathbf{d}) \\[6pt]
-        &\frac{\partial}{\partial d_{i}} \log p_{\mathbf{X}}(\mathbf{x};\mathbf{d})
-            = -\frac{1}{d_i} - \frac{x_i}{d_i}\cdot S_{X_i}(\mathbf{x}) \\[6pt]
-        &\boxed{\mathbf{S}_{\mathbf{d}}(\mathbf{X})
-            = -\mathrm{diag}(\mathbf{d})^{-1}\!\left(\mathbf{1}+ \mathrm{diag}(\mathbf{X}) \cdot \mathbf{S}_{\mathbf{X}}(\mathbf{X})\right)}
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\textbf{SST Validity Conditions:}
-\begin{enumerate}
-    \item The support of $p_0$ must be \emph{independent} of $d$ (otherwise Leibniz boundary terms arise).
-    \item $p_0$ must be differentiable a.e.\ on its support.
-    \item The distribution must satisfy the strict scale structure $p(x;d) = d^{-1} p_0(x/d)$.
-\end{enumerate}
-
-\subsection{Location Family (Shifting)}
-
-A distribution belongs to the \textbf{location family} if:
-\[
-    X = d + Z, \quad Z \sim p_0, \quad E[Z] = 0
-\]
-so the density satisfies $p(x;\,d) = p_0(x - d)$. Then:
-
-\begin{equation}
-    \begin{aligned}
-        &\frac{\partial}{\partial d}\log p(x;\,d)
-            = \frac{\partial}{\partial d}\log p_0(x-d)
-            = -S_{p_0}(x-d) = -S_X(x)\\[6pt]
-        &\boxed{S_d(x) = -S_X(x)}
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\noindent\textbf{Examples:} $\mathcal{N}(d, \sigma^2)$, $\mathrm{Cauchy}(d, \gamma)$, $\mathrm{Logistic}(d, s)$.
-
-\medskip
-\noindent\textbf{Family Classification Guide:}
-\[
-\begin{cases}
-    p(x;d) = p_0(x - d) & \Rightarrow \text{Location family} \Rightarrow S_d = -S_X \\
-    p(x;d) = \frac{1}{d}p_0\!\left(\frac{x}{d}\right) & \Rightarrow \text{Scale family} \Rightarrow S_d = -\frac{1}{d}(1+x S_X)
-\end{cases}
-\]
+\newpage
+\section{Change of variable Technique(1d)}
+\begin{itemize}
+    \item scaling
+    \begin{equation*}
+        \begin{aligned}
+        &f_X(x;d) = \left|\mathbf{J}\right|\cdot f_Z(z;g)\\
+        \\
+        &f_X(x;d)=\frac{1}{d}\cdot f_Z(z;g)\\
+        \\
+        &\log\:f_X(x;d)= - \log\:d + \log\:f_Z(z:g)\\
+        \\
+        &\frac{\partial}{\partial d}\:\log\:f_X(x;d) = -\frac{1}{d} + \frac{\partial}{\partial d}\:\log\:f_Z(z;g)\\
+        \\
+        &\hspace{80pt}=-\frac{1}{d}+\frac{\partial z}{\partial d}\cdot\frac{\partial}{\partial z}\cdot\:\log\:f_Z(z;g)\\
+        \\
+        &\hspace{80pt}=-\frac{1}{d}-\frac{x}{d^2}\cdot\textcolor{red}{\frac{\partial}{\partial z}\cdot\:\log\:f_Z(z;g)}\\
+        \\
+        &\hspace{80pt}=-\frac{1}{d}\left(1+\frac{x}{d}\cdot\textcolor{red}{\frac{\partial}{\partial z}\cdot\:\log\:f_Z(z;g)}\right)\\
+        \\
+        &\mathrm{S}_{d}(x;d) = -\frac{1}{d}\left(1+\frac{x}{d}\cdot\textcolor{red}{\mathrm{S}_{z}(z;g)}\right)\\
+        \end{aligned}
+    \end{equation*}
+\end{itemize}
+\begin{itemize}
+    \item shifting
+    \begin{equation*}
+        \mathrm{S}_{d}(X;d) = -\mathrm{S}_{z}(Z;g)
+    \end{equation*}
+\end{itemize}
 
 % =======================================================
-% Section3. Example
+% Section3. Change of variable Technique
 % =======================================================
+\newpage
+\section{Change of variable Technique(10d)}
+\begin{itemize}
+    \item scaling
+    \begin{equation}
+        \begin{aligned}
+        &f_{\mathbf{X}}(\mathbf{x};\mathbf{d}) = \frac{1}{\Pi_{i=1}^{10}d_i}\cdot f_{\mathbf{Z}}(\mathbf{z};\mathbf{g}) \\
+        \\
+        &\log\:f_{\mathbf{X}}(\mathbf{x};\mathbf{d})=-\sum_{i=1}^{10} \log\:d_i + \log\:f_{\mathbf{Z}}(\mathbf{z};\mathbf{g}) \\
+        \\
+        &\frac{\partial}{\partial d_{k}} \log f_{\mathbf{X}}(\mathbf{x};\mathbf{d}) = \frac{\partial}{\partial d_{k}} \left( -\sum_{i=1}^{10} \log d_i \right) + \frac{\partial}{\partial d_{k}} \log f_{\mathbf{Z}}(\mathbf{z};\mathbf{g})\\
+        \\
+        &\text{1st. term; Jacobian Term}\\
+        \\
+        &\frac{\partial}{\partial d_{k}} \left( -\sum_{i=1}^{10}\log d_i \right) = -\frac{1}{d_{k}}\\
+        \\
+        &\text{2nd. term; Shape Term}\\
+        \\
+        &\frac{\partial}{\partial d_{k}} \log f_{\mathbf{Z}}(\mathbf{z};\mathbf{g}) = \frac{\partial z_k}{\partial {d_k}}\cdot\frac{\partial}{\partial z_k}\cdot\log\:f_\mathbf{Z}(\mathbf{z};\mathbf{g})\\
+        \\
+        & \hspace{90pt}=-\frac{x_k}{d_k^2}\cdot\textcolor{red}{\frac{\partial}{\partial z_k}\cdot\log\:f_\mathbf{Z}(\mathbf{z};\mathbf{g})}\\
+        \\
+        \end{aligned}
+        \nonumber
+    \end{equation}
+    
+    \begin{equation}
+        \begin{aligned}
+        & 1st. term + 2nd. term\\
+        \\
+        & \mathbf{S}_{\mathbf{d}_k}(\mathbf{x};\mathbf{d})=-\frac{1}{d_k} + -\frac{x_k}{d_k^2}\cdot\textcolor{red}{\frac{\partial}{\partial z_k}\cdot\log\:f_\mathbf{Z}(\mathbf{z};\mathbf{g})}\\
+        \\
+        & \hspace{60pt} = -\frac{1}{d_k}\left(1+ -\frac{x_k}{d_k}\cdot\textcolor{red}{\frac{\partial}{\partial z_k}\cdot\log\:f_\mathbf{Z}(\mathbf{z};\mathbf{g})}\right)\\
+        \\
+        & \hspace{60pt} = -\frac{1}{d_k}\left(1+ -\frac{x_k}{d_k}\cdot\textcolor{red}{\mathbf{S}_{z_k}(\mathbf{z};\mathbf{g})}\right)
+        \end{aligned}
+        \nonumber
+    \end{equation}
 
+    \item shifting \\
+    \begin{equation}
+        \begin{aligned}
+            \mathbf{S}_{d_k}(\mathbf{x};\mathbf{d})=-\mathbf{S}_{z_k}(\mathbf{z};\mathbf{g})
+        \end{aligned}
+        \nonumber
+    \end{equation}
+\end{itemize}
+% =======================================================
+% Section4. Example
+% =======================================================
+\newpage
 \section{Example}
+\begin{itemize}
+    \item Binomial gaussian distribution
+    \begin{equation*}
+        \begin{aligned}
+        &f(\mathbf{x}; \boldsymbol{\mu}, \boldsymbol{\Sigma}) = \frac{1}{2\pi \sqrt{|\boldsymbol{\Sigma}|}} \exp\left( -\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu}) \right)\\\\
+        &\boldsymbol{\mu}: \text{평균 벡터} [\mu_1, \mu_2]^\top\\\\
+        &*\boldsymbol{\Sigma} = \begin{bmatrix} \sigma_1^2 & \rho\sigma_1\sigma_2 \\ \rho\sigma_1\sigma_2 & \sigma_2^2 \end{bmatrix}\\
+        \end{aligned}
+        \nonumber
+    \end{equation*}
+
+    \begin{itemize}
+        \item[] $\bullet$ score function w.r.t. X
+        \begin{equation}
+            \begin{aligned}
+            &\log f(\mathbf{x}) = \underbrace{-\log(2\pi) - \frac{1}{2} \log |\boldsymbol{\Sigma}|}_{\text{Constant Term (w.r.t. } \mathbf{x})} \underbrace{-\frac{1}{2} (\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu})}_{\text{Quadratic Term}}\\
+            &\nabla_{\mathbf{x}} \log f(\mathbf{x}) = -\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu}) = \left[ -\frac{x_1-\mu_1}{\sigma_1^2}, -\frac{x_2-\mu_2}{\sigma_2^2} \right]^\top
+            \end{aligned}
+            \nonumber
+        \end{equation}
+
+        \item[] $\bullet$ score function w.r.t. $\mu$
+        \begin{equation}
+            \begin{aligned}
+            &\log f(\mathbf{x}) = -\log(2\pi) - \frac{1}{2} \log |\boldsymbol{\Sigma}| - \frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu})\\
+            \end{aligned}
+            \nonumber
+        \end{equation}
+    \end{itemize}
+\end{itemize}
+% =======================================================
+% Section5. Example
+% =======================================================
+\newpage
+\section{SST Validation}
 
 \subsection{Bivariate Gaussian Distribution}
+\begin{itemize}
+    \item
+    Consider a Bivariate Gaussian distribution where the design variable $\mathrm{d}$ acts as a scaling parameter (Scale Family). The relationship between the physical variable $\mathrm{\mathbf{x}}$ and the normalized variable $\mathbf{z}$ is defined as follows:
+    \begin{equation}
+        \mathrm{\mathbf{x}} = \mathrm{diag}(\mathrm{\mathbf{d}}) \mathbf{z}, \quad \mathbf{z} \sim \mathcal{N}(\mathbf{1}, \boldsymbol{\Sigma}_0)
+    \end{equation}
+    where $\boldsymbol{\Sigma}_0 = \begin{bmatrix} 1 & \rho \\ \rho & 1 \end{bmatrix}$ is the constant correlation matrix.
+\\
 
-\begin{equation*}
-    \begin{aligned}
-    &f(\mathbf{x}; \boldsymbol{\mu}, \boldsymbol{\Sigma}) = \frac{1}{2\pi \sqrt{|\boldsymbol{\Sigma}|}} \exp\left( -\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu}) \right)\\\\
-    &\boldsymbol{\mu} = [\mu_1,\, \mu_2]^\top: \text{mean vector}\\\\
-    &\boldsymbol{\Sigma} = \begin{bmatrix} \sigma_1^2 & \rho\sigma_1\sigma_2 \\ \rho\sigma_1\sigma_2 & \sigma_2^2 \end{bmatrix}, \quad |\boldsymbol{\Sigma}| = \sigma_1^2\sigma_2^2(1-\rho^2)
-    \end{aligned}
-\end{equation*}
+    \item Step 1: Direct Calculation of $\nabla_{\mathbf{z}} \log f_{\mathbf{Z}}(\mathbf{z})$
+    The log-density of the normalized variable $\mathbf{z}$ is given by:
+    \begin{equation}
+        \log f_{\mathbf{Z}}(\mathbf{z}) = -\frac{1}{2} \log |2\pi \boldsymbol{\Sigma}_0| - \frac{1}{2}(\mathbf{z}-\mathbf{1})^\top \boldsymbol{\Sigma}_0^{-1} (\mathbf{z}-\mathbf{1})
+    \end{equation}
+    The score function with respect to $\mathbf{z}$ is obtained by direct differentiation:
+    \begin{equation}
+        \mathbf{S}_{\mathbf{z}}(\mathbf{z}) = \nabla_{\mathbf{z}} \log f_{\mathbf{Z}}(\mathbf{z}) = -\boldsymbol{\Sigma}_0^{-1}(\mathbf{z}-\mathbf{1})
+    \end{equation}
+\\
 
-\subsubsection*{(A) Score function w.r.t.\ $\mathbf{X}$ (Location Family)}
+    \item Step 2: Direct Calculation of $\nabla_{\mathrm{\mathbf{d}}} \log f_{\mathrm{\mathbf{X}}}(\mathrm{\mathbf{x}}; \mathrm{\mathbf{d}})$
+    The log-density in the physical space, considering the Jacobian $|\mathbf{J}| = \prod \mathrm{d}_i$, is:
+    \begin{equation}
+        \log f_{\mathrm{\mathbf{X}}}(\mathrm{\mathbf{x}}; \mathrm{\mathbf{d}}) = -\sum_{i=1}^{2} \log \mathrm{d}_i - \frac{1}{2}(\mathrm{\mathbf{x}}\cdot\mathrm{diag}^{-1}(\mathbf{d})-\mathbf{1})^\top \boldsymbol{\Sigma}_0^{-1} (\mathrm{\mathbf{x}}\cdot\mathrm{diag}^{-1}(\mathrm{\mathbf{d}})-\mathbf{1}) + C
+    \end{equation}
+    Differentiating with respect to $\mathrm{d}_k$ using the chain rule:
+    \begin{itemize}
+        \item \textbf{Jacobian Term:} $\frac{\partial}{\partial \mathrm{d}_k} (-\sum \log \mathrm{d}_i) = -\frac{1}{\mathrm{d}_k}$
+        \item \textbf{Shape Term:} Let $\mathbf{u} = \mathrm{\mathbf{x}}\cdot\mathrm{diag}^{-1}(\mathrm{\mathbf{d}})$. Then $\frac{\partial \mathrm{u}_k}{\partial \mathrm{d}_k} = -\frac{\mathrm{x}_k}{\mathrm{d}_k^2}$.
+        \begin{equation}
+            \frac{\partial}{\partial \mathrm{d}_k} \text{Shape} = -\frac{1}{2} \cdot 2 \cdot \left[ \boldsymbol{\Sigma}_0^{-1}(\mathbf{u}-\mathbf{1}) \right]_k \cdot \left( -\frac{\mathrm{x}_k}{\mathrm{d}_k^2} \right) = \frac{\mathrm{x}_k}{\mathrm{d}_k^2} \left[ \boldsymbol{\Sigma}_0^{-1}(\mathbf{u}-\mathbf{1}) \right]_k
+        \end{equation}
+    \end{itemize}
+    Total direct score $\mathrm{S}_{\mathrm{d}_k}$:
+    \begin{equation}
+        \mathrm{S}_{\mathrm{d}_k}^{\text{Direct}} = -\frac{1}{\mathrm{d}_k} + \frac{\mathrm{x}_k}{\mathrm{d}_k^2} \left[ \boldsymbol{\Sigma}_0^{-1}(\mathbf{u}-\mathbf{1}) \right]_k
+    \end{equation}
+\\
 
-\begin{equation}
-    \begin{aligned}
-    &\log f(\mathbf{x}) = \underbrace{-\log(2\pi) - \tfrac{1}{2} \log |\boldsymbol{\Sigma}|}_{\text{Constant w.r.t.\ }\mathbf{x}}
-        \underbrace{-\frac{1}{2} (\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu})}_{\text{Quadratic Term}}\\[6pt]
-    &\boxed{S_{\mathbf{X}}(\mathbf{x}) = \nabla_{\mathbf{x}} \log f(\mathbf{x}) = -\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})
-        = \left[ -\frac{x_1-\mu_1}{\sigma_1^2(1-\rho^2)} + \frac{\rho(x_2-\mu_2)}{\sigma_1\sigma_2(1-\rho^2)},\;
-               -\frac{x_2-\mu_2}{\sigma_2^2(1-\rho^2)} + \frac{\rho(x_1-\mu_1)}{\sigma_1\sigma_2(1-\rho^2)} \right]^\top}
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\noindent For the uncorrelated case ($\rho = 0$): $S_{\mathbf{X}}(\mathbf{x}) = \left[-\frac{x_1-\mu_1}{\sigma_1^2},\; -\frac{x_2-\mu_2}{\sigma_2^2}\right]^\top$.
-
-\subsubsection*{(B) Score function w.r.t.\ $\boldsymbol{\mu}$ (Location Family, $\mathbf{d} = \boldsymbol{\mu}$)}
-
-Since $\mathbf{X} = \boldsymbol{\mu} + \mathbf{Z}$, $\mathbf{Z} \sim \mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma})$ (location family):
-
-\begin{equation}
-    \begin{aligned}
-    &\frac{\partial}{\partial \boldsymbol{\mu}} \log f(\mathbf{x};\boldsymbol{\mu},\boldsymbol{\Sigma})
-        = \frac{\partial}{\partial \boldsymbol{\mu}}\left[-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top
-        \boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})\right]
-        = \boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})\\[6pt]
-    &\boxed{S_{\boldsymbol{\mu}}(\mathbf{x}) = \boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu}) = -S_{\mathbf{X}}(\mathbf{x})}
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\noindent This confirms the location family identity $S_{\mathbf{d}} = -S_{\mathbf{X}}$.
-
-\subsubsection*{(C) Scaling Family Case ($\mathbf{d} = \boldsymbol{\sigma}$, scale parameter)}
-
-Consider $\mathbf{X} = \mathrm{diag}(\mathbf{d})\mathbf{Z}$ with $\mathbf{Z} \sim \mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma}_0)$, $\mathbf{d} = (d_1, d_2)^\top$
-(standard deviations). Then $\mathbf{X} \sim \mathcal{N}(\mathbf{0},\, D\boldsymbol{\Sigma}_0 D)$ where $D = \mathrm{diag}(\mathbf{d})$.
-
-\textbf{Step 1: Score w.r.t.\ $\mathbf{X}$}
-
-Let $\mathbf{u} = \mathbf{x}\oslash\mathbf{d} = D^{-1}\mathbf{x}$. Then:
-\begin{equation}
-    S_{\mathbf{X}}(\mathbf{x}) = -\bigl(D\boldsymbol{\Sigma}_0 D\bigr)^{-1}\mathbf{x}
-        = -D^{-1}\boldsymbol{\Sigma}_0^{-1}D^{-1}\mathbf{x}
-        = -D^{-1}\boldsymbol{\Sigma}_0^{-1}\mathbf{u}
-    \nonumber
-\end{equation}
-
-\textbf{Step 2: Apply SST formula}
-
-\begin{equation}
-    \begin{aligned}
-    S_{d_i}(\mathbf{x}) &= -\frac{1}{d_i}\Bigl(1 + x_i \cdot \bigl[S_{\mathbf{X}}(\mathbf{x})\bigr]_i\Bigr)\\[4pt]
-        &= -\frac{1}{d_i}\Bigl(1 - u_i\,\bigl[\boldsymbol{\Sigma}_0^{-1}\mathbf{u}\bigr]_i\Bigr)
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\textbf{Independent case} ($\boldsymbol{\Sigma}_0 = I$, i.e.\ $\rho = 0$):
-\begin{equation}
-    S_{X_i}(\mathbf{x}) = -\frac{x_i}{d_i^2}, \qquad
-    \boxed{S_{d_i}(\mathbf{x}) = -\frac{1}{d_i}\!\left(1 - \frac{x_i^2}{d_i^2}\right)
-        = -\frac{1}{d_i} + \frac{x_i^2}{d_i^3}}
-    \nonumber
-\end{equation}
-
-\textbf{Verification by direct differentiation:}
-\begin{equation}
-    \begin{aligned}
-    \log p(\mathbf{x};\mathbf{d}) &= -\sum_{i=1}^2 \log d_i - \frac{1}{2}\mathbf{u}^\top\boldsymbol{\Sigma}_0^{-1}\mathbf{u}
-        - \log(2\pi) - \tfrac{1}{2}\log|\boldsymbol{\Sigma}_0|\\[4pt]
-    \frac{\partial}{\partial d_i}\log p &= -\frac{1}{d_i} - \frac{1}{2}\frac{\partial}{\partial d_i}
-        \bigl(\mathbf{u}^\top\boldsymbol{\Sigma}_0^{-1}\mathbf{u}\bigr)
-    \end{aligned}
-    \nonumber
-\end{equation}
-For the independent case ($\boldsymbol{\Sigma}_0 = I$):
-\[
-    \frac{\partial}{\partial d_i}\!\left(\sum_j \frac{x_j^2}{d_j^2}\right) = -\frac{2x_i^2}{d_i^3}
-    \quad\Rightarrow\quad
-    \frac{\partial}{\partial d_i}\log p = -\frac{1}{d_i} + \frac{x_i^2}{d_i^3} \quad\checkmark
-\]
-
-
-\subsection{Lognormal Distribution (Scaling Family)}
-
-Let $X \sim \mathrm{LN}(\mu_{\ell},\, \sigma^2)$ where $\sigma^2$ is fixed and the mean $d = E[X] = e^{\mu_\ell + \sigma^2/2}$.
-Reparameterize: $\mu_\ell = \log d - \sigma^2/2$ so that $d$ directly equals the mean.
-
-\textbf{Scale family structure:} $X = d \cdot Z_0$ where $Z_0 \sim \mathrm{LN}(-\sigma^2/2,\,\sigma^2)$ and $E[Z_0] = 1$. \\
-The pdf is:
-\[
-    p(x;\,d) = \frac{1}{x\,\sigma\sqrt{2\pi}}
-    \exp\!\left(-\frac{\bigl(\log x - \log d + \sigma^2/2\bigr)^2}{2\sigma^2}\right), \quad x > 0.
-\]
-
-\subsubsection*{(A) Score w.r.t.\ $X$}
-
-\begin{equation}
-    \begin{aligned}
-    \log p(x;\,d) &= -\log x - \log\sigma - \tfrac{1}{2}\log(2\pi)
-        - \frac{\bigl(\log x - \log d + \sigma^2/2\bigr)^2}{2\sigma^2}\\[6pt]
-    S_X(x) &= \frac{\partial}{\partial x}\log p(x;\,d)
-        = -\frac{1}{x} - \frac{\log x - \log d + \sigma^2/2}{\sigma^2\,x}\\[4pt]
-    &\boxed{S_X(x) = -\frac{1}{x}\left[1 + \frac{\log(x/d) + \sigma^2/2}{\sigma^2}\right]}
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\subsubsection*{(B) Score w.r.t.\ $d$ via Direct Differentiation}
-
-Since only $\log d$ appears in $\log p$:
-\begin{equation}
-    \frac{\partial}{\partial d}\log p(x;\,d)
-    = -\frac{\log x - \log d + \sigma^2/2}{\sigma^2} \cdot \left(-\frac{1}{d}\right)
-    = \frac{\log x - \log d + \sigma^2/2}{\sigma^2\, d}
-    \nonumber
-\end{equation}
-\begin{equation}
-    \boxed{S_d(x) = \frac{\log(x/d) + \sigma^2/2}{\sigma^2\, d}}
-    \nonumber
-\end{equation}
-
-\subsubsection*{(C) Score w.r.t.\ $d$ via SST Formula}
-
-\begin{equation}
-    \begin{aligned}
-    x \cdot S_X(x) &= -1 - \frac{\log(x/d) + \sigma^2/2}{\sigma^2}\\[4pt]
-    1 + x\cdot S_X(x) &= -\frac{\log(x/d) + \sigma^2/2}{\sigma^2}\\[4pt]
-    S_d(x) = -\frac{1}{d}\bigl(1 + x\cdot S_X(x)\bigr)
-        &= \frac{\log(x/d) + \sigma^2/2}{\sigma^2\, d} \quad\checkmark
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\noindent Both methods agree. Note: as $x\to 0^+$, $S_d(x)\to -\infty$, reflecting that extremely small observations strongly indicate a large mean is unlikely.
-
-
-\subsection{Exponential Distribution (Scaling Family)}
-
-Let $X \sim \mathrm{Exp}(\lambda)$ with $d = E[X] = 1/\lambda > 0$.
-
-\textbf{Scale family structure:} $X = d\cdot Z_0$ where $Z_0 \sim \mathrm{Exp}(1)$ and $E[Z_0]=1$. The pdf is:
-\[
-    p(x;\,d) = \frac{1}{d}\,e^{-x/d}, \quad x > 0.
-\]
-
-\subsubsection*{(A) Score w.r.t.\ $X$}
-
-\begin{equation}
-    \log p(x;\,d) = -\log d - \frac{x}{d}
-    \qquad\Rightarrow\qquad
-    \boxed{S_X(x) = \frac{\partial}{\partial x}\log p(x;\,d) = -\frac{1}{d}}
-    \nonumber
-\end{equation}
-
-\noindent\textit{Remark:} $S_X$ is constant in $x$ because the Exponential distribution is \emph{memoryless}: the log-density is linear in $x$. Every observation carries the same "shape information," but the scale information is recovered through the SST.
-
-\subsubsection*{(B) Score w.r.t.\ $d$ via Direct Differentiation}
-
-\begin{equation}
-    \frac{\partial}{\partial d}\log p(x;\,d)
-    = \frac{\partial}{\partial d}\!\left(-\log d - \frac{x}{d}\right)
-    = -\frac{1}{d} + \frac{x}{d^2}
-    \nonumber
-\end{equation}
-\begin{equation}
-    \boxed{S_d(x) = -\frac{1}{d} + \frac{x}{d^2} = \frac{x - d}{d^2}}
-    \nonumber
-\end{equation}
-
-\subsubsection*{(C) Score w.r.t.\ $d$ via SST Formula}
-
-\begin{equation}
-    \begin{aligned}
-    1 + x\cdot S_X(x) &= 1 + x\cdot\!\left(-\frac{1}{d}\right) = 1 - \frac{x}{d}\\[4pt]
-    S_d(x) = -\frac{1}{d}\!\left(1 - \frac{x}{d}\right)
-        &= -\frac{1}{d} + \frac{x}{d^2} = \frac{x-d}{d^2} \quad\checkmark
-    \end{aligned}
-    \nonumber
-\end{equation}
-
-\noindent Note: $E[S_d(X)] = (E[X] - d)/d^2 = 0$ (score function has zero mean), confirming correctness.
-
-
-% =======================================================
-% Section 4. Summary
-% =======================================================
-\section{Summary: Scaling Family SST Results}
-
-\begin{center}
-\renewcommand{\arraystretch}{1.6}
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Distribution} & \textbf{Score} $S_X(x)$ & \textbf{SST Result} $S_d(x)$ & \textbf{Family} \\
-\hline
-Bivariate Normal $\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ & $-\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})$ & $\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})$ & Location \\
-\hline
-Bivariate Normal $\mathcal{N}(\mathbf{0}, D\boldsymbol{\Sigma}_0 D)$ & $-D^{-1}\boldsymbol{\Sigma}_0^{-1}D^{-1}\mathbf{x}$ &
-    $-D^{-1}(\mathbf{1} - \mathbf{u}\odot[\boldsymbol{\Sigma}_0^{-1}\mathbf{u}])$ & Scale \\
-\hline
-Lognormal $\mathrm{LN}(\log d - \tfrac{\sigma^2}{2},\,\sigma^2)$ &
-    $-\frac{1}{x}\!\left(1 + \frac{\log(x/d)+\sigma^2/2}{\sigma^2}\right)$ &
-    $\dfrac{\log(x/d)+\sigma^2/2}{\sigma^2 d}$ & Scale \\
-\hline
-Exponential $\mathrm{Exp}(1/d)$ & $-1/d$ & $(x-d)/d^2$ & Scale \\
-\hline
-\end{tabular}
-\end{center}
-
-\medskip
-\noindent\textbf{Key Insight (Gemini/OpenAI Consensus):} In any pure scale family, the parameter $d$ enters $\log p(x;d)$ through exactly two pathways: (i) a Jacobian term $-\log d$ ensuring probability conservation, and (ii) the argument $x/d$ in the base density $\log p_0$. Differentiating these two pathways with respect to $d$ produces the Jacobian component $-1/d$ and the shape (chain-rule) component $-(x/d)S_X(x)$, which is the universal structure encoded in the SST formula.
+    \item Step 3: Verification via SST Theory
+    According to SST theory for Scale Family, the transformation is defined as:
+    \begin{equation}
+        \mathrm{S}_{\mathrm{d}_k}^{\text{SST}} = -\frac{1}{\mathrm{d}_k} \left( 1 + \frac{\mathrm{x}_k}{\mathrm{d}_k} \mathrm{S}_{\mathbf{z}, k} \right)
+    \end{equation}
+    Substituting $\mathrm{S}_{\mathbf{z}, k} = \left[ -\boldsymbol{\Sigma}_0^{-1}(\mathbf{z}-\mathbf{1}) \right]_k$ from Step 1:
+    \begin{equation}
+        \mathrm{S}_{\mathrm{d}_k}^{\text{SST}} = -\frac{1}{\mathrm{d}_k} \left( 1 + \frac{\mathrm{x}_k}{\mathrm{d}_k} \left[ -\boldsymbol{\Sigma}_0^{-1}(\mathbf{u}-\mathbf{1}) \right]_k \right)
+    \end{equation}
+    Distributing terms:
+    \begin{equation}
+        \mathrm{S}_{\mathrm{d}_k}^{\text{SST}} = -\frac{1}{\mathrm{d}_k} + \frac{\mathrm{x}_k}{\mathrm{d}_k^2} \left[ \boldsymbol{\Sigma}_0^{-1}(\mathbf{u}-\mathbf{1}) \right]_k
+    \end{equation}
+    \textbf{Conclusion:} $\mathrm{S}_{\mathrm{d}_k}^{\text{Direct}} \equiv \mathrm{S}_{\mathrm{d}_k}^{\text{SST}}$. The mathematical and logical consistency of the SST theory is verified for correlated bivariate scaling cases.
+\end{itemize}
 
 \end{document}
