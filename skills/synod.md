@@ -20,7 +20,7 @@ applies timeouts/fallbacks and saves session state in `.omc/synod/<session-id>/`
 
 ## Running synod-run
 - PowerShell/cmd: `synod-run <subcommand> ...` (`bin/` is on PATH).
-- Git Bash: `.bat` names fail with exit 127. Use `py "C:/Users/user/Documents/GitHub/fairy_tail/tools/synod-run.py" <subcommand> ...`.
+- Git Bash: the bare name fails with exit 127. Call it with the extension: `synod-run.bat <subcommand> ...`.
 - Rounds can take several minutes: always set the tool timeout to 600000 ms. Do not poll or sleep.
 - Write input files (problem, answers, context) with the Write tool into the scratchpad/temp directory.
 

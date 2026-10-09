@@ -1,2 +1,2 @@
 @echo off
-py "%~dp0..\tools\deepseek-cli.py" %*
+py -3 "%~dp0..\tools\deepseek-cli.py" %*

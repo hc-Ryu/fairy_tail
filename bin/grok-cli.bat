@@ -1,2 +1,2 @@
 @echo off
-py "%~dp0..\tools\grok-cli.py" %*
+py -3 "%~dp0..\tools\grok-cli.py" %*

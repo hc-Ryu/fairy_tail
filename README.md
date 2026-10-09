@@ -321,11 +321,11 @@ export SYNOD_RETENTION_DAYS=30
 
 <br/>
 
-1. 저장소 클론 후 의존성 설치: `py -m pip install -r requirements.txt`
+1. 저장소 클론 후 의존성 설치: `py -3 -m pip install -r requirements.txt`
 2. `<클론 경로>\bin`을 사용자 PATH에 추가 (`synod-run`, `gemini-3`, `openai-cli` 호출용)
 3. 환경 변수 `GEMINI_API_KEY`, `OPENAI_API_KEY` 등록
 4. Synod를 쓸 프로젝트의 `.claude/commands/`(또는 `~/.claude/commands/`)에 `skills/synod.md`, `skills/cancel-synod.md` 복사
-5. 복사한 두 파일 안의 Git Bash용 경로 `C:/Users/user/Documents/GitHub/fairy_tail`을 새 PC의 클론 경로로 변경
+5. `bin\*.bat`은 `py -3`(설치된 최신 3.x)으로 실행됨 — 1번의 `pip install`도 같은 버전에 설치되어야 함 (`py -3 -m pip ...`). Git Bash에서는 `synod-run.bat`처럼 확장자를 붙여 호출
 6. 확인: PowerShell에서 `echo "reply OK" | openai-cli --model luna` / `echo "reply OK" | gemini-3`
 
 </details>
