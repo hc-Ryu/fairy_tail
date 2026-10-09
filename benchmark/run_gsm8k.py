@@ -115,12 +115,12 @@ def call_synod_solver(
     start = time.time()
 
     # Get model configurations from config
-    gemini_model = config["models"]["gemini"]  # e.g., "gemini-2.0-flash"
-    openai_model = config["models"]["openai"]["primary"]  # e.g., "gpt-4o"
+    gemini_model = config["models"]["gemini"]  # e.g., "gemini-3.8-flash"
+    openai_model = config["models"]["openai"]["primary"]  # e.g., "gpt-6-luna"
 
     # Map to CLI model names
     gemini_cli_model = "flash" if "flash" in gemini_model else "pro"
-    openai_cli_model = "gpt4o" if "gpt4o" in openai_model else "o3"
+    openai_cli_model = "sol" if "sol" in openai_model else "luna"
 
     # Create temp directory for this question
     with tempfile.TemporaryDirectory() as temp_dir:

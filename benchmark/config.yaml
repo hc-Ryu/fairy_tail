@@ -4,10 +4,10 @@ version: "1.0.0"
 # Model Configuration
 models:
   claude: "claude-sonnet-4-20250514"
-  gemini: "gemini-2.0-flash"
+  gemini: "gemini-3.8-flash"
   openai:
-    primary: "gpt-4o"
-    expensive: "o3"
+    primary: "gpt-6-luna"
+    expensive: "gpt-6.1-sol"
 
 # Benchmark Settings
 benchmarks:

@@ -130,7 +130,7 @@ export OPENAI_API_KEY="your-openai-key"
 | 프로바이더 | CLI | 최적 용도 | 필수 |
 |:--------:|:---:|:---------|:----:|
 | 🔵 **Gemini** | `gemini-3` | 기본 토론자, 사고 모드 | ✅ |
-| 🟢 **OpenAI** | `openai-cli` | 기본 토론자, o3 추론 | ✅ |
+| 🟢 **OpenAI** | `openai-cli` | 기본 토론자, GPT-6.1 Sol / GPT-6 Luna | ✅ |
 | 🟣 **DeepSeek** | `deepseek-cli` | 수학, 추론 (R1) | 선택 |
 | ⚡ **Groq** | `groq-cli` | 초고속 추론 (LPU) | 선택 |
 | 🔶 **Grok** | `grok-cli` | 2M 컨텍스트 윈도우 | 선택 |

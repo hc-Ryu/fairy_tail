@@ -23,25 +23,23 @@ class TestModelMapping:
 
     def test_model_map_contains_all_models(self):
         """Test that MODEL_MAP has all expected models."""
-        assert "gpt4o" in openai_cli.MODEL_MAP
-        assert "o3" in openai_cli.MODEL_MAP
-        assert "o4mini" in openai_cli.MODEL_MAP
+        assert "luna" in openai_cli.MODEL_MAP
+        assert "sol" in openai_cli.MODEL_MAP
+        assert set(openai_cli.MODEL_MAP) == {"luna", "sol"}
 
     def test_model_names_correct(self):
         """Test that model names are correctly mapped."""
-        assert openai_cli.MODEL_MAP["gpt4o"] == "gpt-4o"
-        assert openai_cli.MODEL_MAP["o3"] == "o3"
-        assert openai_cli.MODEL_MAP["o4mini"] == "o4-mini"
+        assert openai_cli.MODEL_MAP["luna"] == "gpt-6-luna"
+        assert openai_cli.MODEL_MAP["sol"] == "gpt-6.1-sol"
 
 
-class TestOSeriesModels:
-    """Tests for O_SERIES_MODELS configuration."""
+class TestReasoningModels:
+    """Tests for REASONING_MODELS configuration."""
 
-    def test_o_series_models_list(self):
-        """Test that o-series models are correctly identified."""
-        assert "o3" in openai_cli.O_SERIES_MODELS
-        assert "o4mini" in openai_cli.O_SERIES_MODELS
-        assert "gpt4o" not in openai_cli.O_SERIES_MODELS
+    def test_reasoning_models_list(self):
+        """Test that reasoning models are correctly identified."""
+        assert "luna" in openai_cli.REASONING_MODELS
+        assert "sol" in openai_cli.REASONING_MODELS
 
 
 class TestTimeoutConfig:
@@ -49,7 +47,7 @@ class TestTimeoutConfig:
 
     def test_timeout_config_has_all_combinations(self):
         """Test that timeout config covers all model+reasoning combinations."""
-        models = ["gpt4o", "o3", "o4mini"]
+        models = ["luna", "sol"]
         levels = ["low", "medium", "high"]
 
         for model in models:
@@ -62,11 +60,9 @@ class TestTimeoutConfig:
             assert timeout > 0
             assert timeout <= 600  # Max 10 minutes
 
-    def test_o3_high_has_longest_timeout(self):
-        """Test that o3 with high reasoning has the longest timeout."""
-        o3_high = openai_cli.TIMEOUT_CONFIG[("o3", "high")]
-        # Should be one of the highest timeouts
-        assert o3_high >= 180
+    def test_sol_high_has_longest_timeout(self):
+        """Test that sol with high reasoning has the longest timeout."""
+        assert openai_cli.TIMEOUT_CONFIG[("sol", "high")] == max(openai_cli.TIMEOUT_CONFIG.values())
 
 
 class TestReasoningLevels:
@@ -104,15 +100,9 @@ class TestGenerateWithRetry:
         assert "max_retries" in params
         assert "adaptive" in params
 
-    def test_o_series_includes_reasoning_effort(self):
-        """Test that o-series models should use reasoning_effort."""
-        # This is a configuration test
-        for model in openai_cli.O_SERIES_MODELS:
-            assert model in ["o3", "o4mini"]
-
-    def test_gpt4o_excludes_reasoning_effort(self):
-        """Test that gpt4o should not use reasoning_effort."""
-        assert "gpt4o" not in openai_cli.O_SERIES_MODELS
+    def test_all_models_use_reasoning_effort(self):
+        """Test that every mapped model receives reasoning_effort."""
+        assert set(openai_cli.REASONING_MODELS) == set(openai_cli.MODEL_MAP)
 
 
 class TestIntegration:
@@ -159,21 +149,14 @@ class TestTimeoutStrategy:
 
     def test_timeout_increases_with_reasoning_level(self):
         """Test that timeouts increase with reasoning complexity."""
-        for model in ["gpt4o", "o3", "o4mini"]:
+        for model in ["luna", "sol"]:
             low = openai_cli.TIMEOUT_CONFIG[(model, "low")]
             medium = openai_cli.TIMEOUT_CONFIG[(model, "medium")]
             high = openai_cli.TIMEOUT_CONFIG[(model, "high")]
             # Timeouts should generally increase or stay same
             assert low <= medium <= high or (low == medium == high)
 
-    def test_o_series_has_higher_timeouts(self):
-        """Test that o-series models have generally higher timeouts."""
-        # O3 should have higher timeouts than gpt4o on average
-        o3_avg = (
-            sum(openai_cli.TIMEOUT_CONFIG[("o3", level)] for level in ["low", "medium", "high"]) / 3
-        )
-        gpt4o_avg = (
-            sum(openai_cli.TIMEOUT_CONFIG[("gpt4o", level)] for level in ["low", "medium", "high"])
-            / 3
-        )
-        assert o3_avg > gpt4o_avg
+    def test_sol_has_higher_timeouts_than_luna(self):
+        """Test that sol (heavier reasoning) gets longer timeouts than luna."""
+        for level in ["low", "medium", "high"]:
+            assert openai_cli.TIMEOUT_CONFIG[("sol", level)] >= openai_cli.TIMEOUT_CONFIG[("luna", level)]

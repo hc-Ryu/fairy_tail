@@ -28,15 +28,11 @@ class TestModelMapping:
         """Test that MODEL_MAP has all expected models."""
         assert "flash" in gemini_cli.MODEL_MAP
         assert "pro" in gemini_cli.MODEL_MAP
-        assert "2.5-flash" in gemini_cli.MODEL_MAP
-        assert "2.5-pro" in gemini_cli.MODEL_MAP
 
     def test_model_names_correct(self):
         """Test that model names are correctly mapped."""
-        assert gemini_cli.MODEL_MAP["flash"] == "gemini-3-flash-preview"
-        assert gemini_cli.MODEL_MAP["pro"] == "gemini-3-pro-preview"
-        assert gemini_cli.MODEL_MAP["2.5-flash"] == "gemini-2.5-flash"
-        assert gemini_cli.MODEL_MAP["2.5-pro"] == "gemini-2.5-pro"
+        assert gemini_cli.MODEL_MAP["flash"] == "gemini-3.8-flash"
+        assert gemini_cli.MODEL_MAP["pro"] == "gemini-3.1-pro-preview"
 
 
 class TestThinkingMapping:
@@ -49,6 +45,11 @@ class TestThinkingMapping:
         assert "medium" in gemini_cli.THINKING_MAP
         assert "high" in gemini_cli.THINKING_MAP
         assert "max" in gemini_cli.THINKING_MAP
+
+    def test_thinking_level_map_covers_all_levels(self):
+        """Gemini 3.x thinking_level mapping covers every CLI level."""
+        for level in gemini_cli.THINKING_MAP:
+            assert gemini_cli.THINKING_LEVEL_MAP[level] in ("low", "medium", "high")
 
     def test_thinking_budgets_increasing(self):
         """Test that thinking budgets increase appropriately."""

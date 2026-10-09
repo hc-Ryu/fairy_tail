@@ -7,14 +7,14 @@ Usage:
   openai-cli "prompt" [--model MODEL] [--reasoning LEVEL]
   openai-cli --prompt "prompt" [--model MODEL] [--reasoning LEVEL]
 
-Models: gpt4o (default), o3, o4mini
-Reasoning: low, medium (default), high (o-series only)
+Models: luna (default), sol
+Reasoning: low, medium (default), high (reasoning models only)
 
 Examples:
   echo "2+2는?" | openai-cli
-  echo "복잡한 수학" | openai-cli --model o3 --reasoning high
-  openai-cli "간단한 질문" --model gpt4o
-  openai-cli --prompt "간단한 질문" --model gpt4o
+  echo "복잡한 수학" | openai-cli --model sol --reasoning high
+  openai-cli "간단한 질문" --model luna
+  openai-cli --prompt "간단한 질문" --model luna
 """
 
 import argparse
@@ -24,7 +24,7 @@ import sys
 import time
 
 # Fix Windows cp949 encoding issue
-if sys.platform == "win32":
+if sys.platform == "win32" and hasattr(sys.stdin, "reconfigure"):
     sys.stdin.reconfigure(encoding="utf-8", errors="replace")
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -40,23 +40,23 @@ except ImportError:
 # API 키 (main()에서 검증)
 api_key = os.environ.get("OPENAI_API_KEY")
 
-# 모델 매핑 (2026년 1월 기준)
-MODEL_MAP = {"gpt4o": "gpt-4o", "o3": "o3", "o4mini": "o4-mini"}
+# 모델 매핑 (2026년 10월 기준)
+MODEL_MAP = {
+    "luna": "gpt-6-luna",
+    "sol": "gpt-6.1-sol",
+}
 
-# Reasoning Effort는 o-series 모델에서만 작동
-O_SERIES_MODELS = ["o3", "o4mini"]
+# Reasoning Effort를 지원하는 모델
+REASONING_MODELS = ["luna", "sol"]
 
 # 모델별 타임아웃 설정 (초)
 TIMEOUT_CONFIG = {
-    ("gpt4o", "low"): 60,
-    ("gpt4o", "medium"): 60,
-    ("gpt4o", "high"): 60,
-    ("o3", "low"): 120,
-    ("o3", "medium"): 180,
-    ("o3", "high"): 300,
-    ("o4mini", "low"): 60,
-    ("o4mini", "medium"): 90,
-    ("o4mini", "high"): 120,
+    ("luna", "low"): 60,
+    ("luna", "medium"): 90,
+    ("luna", "high"): 120,
+    ("sol", "low"): 120,
+    ("sol", "medium"): 180,
+    ("sol", "high"): 300,
 }
 
 # Reasoning 레벨 (다운그레이드용)
@@ -96,8 +96,8 @@ def generate_with_retry(
                 "messages": [{"role": "user", "content": prompt}],
             }
 
-            # Add reasoning_effort for o-series models
-            if model in O_SERIES_MODELS:
+            # Add reasoning_effort for reasoning models
+            if model in REASONING_MODELS:
                 request_params["reasoning_effort"] = current_reasoning
 
             # Generate response
@@ -120,7 +120,7 @@ def generate_with_retry(
             if is_timeout or is_overloaded:
                 if (
                     adaptive
-                    and model in O_SERIES_MODELS
+                    and model in REASONING_MODELS
                     and current_idx < len(REASONING_LEVELS) - 1
                 ):
                     # Downgrade reasoning level
@@ -164,11 +164,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Models:
-  gpt4o   - 범용, 균형잡힌 성능 (기본값, $2.50/$10 per 1M)
-  o3      - 최고 추론 성능 (수학/논리에 최적, $10/$40 per 1M)
-  o4mini  - 경제적 추론 (빠르고 저렴)
+  luna    - GPT-6 Luna, 경제적 범용 (기본값, $0.10/$0.50 per 1M)
+  sol     - GPT-6.1 Sol, 고급 추론 ($2/$10 per 1M)
 
-Reasoning Levels (o-series only):
+Reasoning Levels (reasoning models only):
   low     - 속도 우선, 경제적
   medium  - 균형 (기본값)
   high    - 최대 추론 깊이
@@ -187,16 +186,16 @@ Reasoning Levels (o-series only):
     parser.add_argument(
         "--model",
         "-m",
-        choices=["gpt4o", "o3", "o4mini"],
-        default="gpt4o",
-        help="사용할 모델 (기본값: gpt4o)",
+        choices=list(MODEL_MAP),
+        default="luna",
+        help="사용할 모델 (기본값: luna)",
     )
     parser.add_argument(
         "--reasoning",
         "-r",
         choices=["low", "medium", "high"],
         default="medium",
-        help="Reasoning 레벨 - o-series 모델 전용 (기본값: medium)",
+        help="Reasoning 레벨 - reasoning 모델 전용 (기본값: medium)",
     )
     parser.add_argument(
         "--timeout",
@@ -234,7 +233,7 @@ Reasoning Levels (o-series only):
 
     if not prompt:
         sys.stderr.write(
-            "Usage: openai-cli 'prompt' [--model gpt4o|o3|o4mini] [--reasoning low|medium|high]\n"
+            "Usage: openai-cli 'prompt' [--model luna|sol] [--reasoning low|medium|high]\n"
         )
         sys.stderr.write("       openai-cli --prompt 'prompt' [options]\n")
         sys.stderr.write("       echo 'prompt' | openai-cli [options]\n")

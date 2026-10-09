@@ -7,7 +7,7 @@ Usage:
   gemini-3 "prompt" [options]
   gemini-3 --model flash --thinking high "prompt"
 
-Models: flash (default), pro
+Models: flash (default), flash-lite, pro
 Thinking: minimal, low, medium (default), high
 """
 
@@ -35,10 +35,9 @@ except ImportError:
 
 # Model mapping
 MODEL_MAP = {
-    "flash": "gemini-3-flash-preview",
-    "pro": "gemini-3-pro-preview",
-    "2.5-flash": "gemini-2.5-flash",
-    "2.5-pro": "gemini-2.5-pro",
+    "flash": "gemini-3.8-flash",
+    "flash-lite": "gemini-3.1-flash-lite",
+    "pro": "gemini-3.1-pro-preview",
 }
 
 # Thinking budget mapping (tokens)
@@ -48,6 +47,15 @@ THINKING_MAP = {
     "medium": 500,
     "high": 2000,
     "max": 10000,
+}
+
+# Gemini 3.x uses thinking_level instead of a token budget
+THINKING_LEVEL_MAP = {
+    "minimal": "low",
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+    "max": "high",
 }
 
 # Retry levels (progressive downgrade)
@@ -81,9 +89,16 @@ def generate_with_retry(
 
     for attempt in range(max_retries):
         try:
-            thinking_budget = THINKING_MAP.get(current_level, 500)
+            if model.startswith("gemini-3"):
+                thinking_config = types.ThinkingConfig(
+                    thinking_level=THINKING_LEVEL_MAP.get(current_level, "medium")
+                )
+            else:
+                thinking_config = types.ThinkingConfig(
+                    thinking_budget=THINKING_MAP.get(current_level, 500)
+                )
             config = types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+                thinking_config=thinking_config,
                 temperature=temperature,
             )
 
@@ -164,7 +179,7 @@ Examples:
     parser.add_argument(
         "-m",
         "--model",
-        choices=["flash", "pro", "2.5-flash", "2.5-pro"],
+        choices=list(MODEL_MAP),
         default="flash",
         help="Model to use (default: flash)",
     )

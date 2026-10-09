@@ -1,29 +1,30 @@
-# Synod v1.0 - Quick Reference
+# Synod v2 - Quick Reference
 
-**Project:** Multi-agent deliberation system for Claude Code
+**Project:** Multi-agent deliberation system for Claude Code (Claude + Gemini + OpenAI)
 
 ## Commands
-- `/synod [mode] <prompt>` - 다중 에이전트 숙의
+- `/synod [mode] <prompt>` - 다중 에이전트 숙의 (`.claude/commands/synod.md`, 배포용 사본 `skills/synod.md`)
 - `/cancel-synod` - 세션 취소
 
-## Modes
-| Mode | Gemini | OpenAI | Rounds |
-|------|--------|--------|--------|
-| review | flash | o3 | 3 |
-| design | pro | o3 | 4 |
-| debug | flash | o3 | 3 |
-| idea | pro | gpt4o | 4 |
-| general | flash | gpt4o | 3 |
+## Modes (defaults in `tools/synod-run.py` → `MODES`)
+| Mode | Gemini | OpenAI | Max rounds |
+|------|--------|--------|------------|
+| review | flash (3.8) / high | sol / medium | 3 |
+| design | flash / high | sol / high | 3 |
+| debug | flash / high | sol / high | 3 |
+| idea | flash / high | luna / medium | 3 |
+| general | flash / medium | luna / low | 2 |
+
+Rounds are adaptive: early exit after solver, defense round only when the critics raise a substantive objection.
 
 ## Key Files
-- Skills: `skills/synod.md`, `skills/cancel-synod.md`
-- Tools: `tools/gemini-3.py`, `tools/openai-cli.py`
-- Sessions: `~/.synod/sessions/`
+- `tools/synod-run.py` - round runner (parallel calls, SID parsing, fallback, session state)
+- `tools/gemini-3.py`, `tools/openai-cli.py` - provider CLIs (`bin/*.bat` wrappers)
+- `tools/synod-parser.py` - SID signal parser / Trust Score
+- Optional providers: `tools/{deepseek,groq,grok,mistral,claude}-cli.py` (not used by default)
+- Sessions: `.omc/synod/<session-id>/`
+- Tests: `py -m pytest -o addopts="" tests`
 
-## Detailed Documentation
-- Architecture: `docs/ARCHITECTURE.md`
-- Algorithms: `docs/ALGORITHMS.md`
-- API Reference: `docs/API.md`
-
----
-*Full documentation: See `docs/` directory*
+## Editing rules
+- Keep `.claude/commands/*.md` and `skills/*.md` identical (copy after editing).
+- Model IDs: verify with the provider's model list before changing `MODEL_MAP`.

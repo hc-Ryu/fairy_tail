@@ -130,7 +130,7 @@ export OPENAI_API_KEY="your-openai-key"
 | Provider | CLI | Best For | Required |
 |:--------:|:---:|:---------|:--------:|
 | 🔵 **Gemini** | `gemini-3` | Default debater, thinking modes | ✅ |
-| 🟢 **OpenAI** | `openai-cli` | Default debater, o3 reasoning | ✅ |
+| 🟢 **OpenAI** | `openai-cli` | Default debater, GPT-6.1 Sol / GPT-6 Luna | ✅ |
 | 🟣 **DeepSeek** | `deepseek-cli` | Math, reasoning (R1) | Optional |
 | ⚡ **Groq** | `groq-cli` | Ultra-fast inference (LPU) | Optional |
 | 🔶 **Grok** | `grok-cli` | 2M context window | Optional |
@@ -313,6 +313,20 @@ export OPENAI_API_KEY="your-openai-key"
 export SYNOD_SESSION_DIR="~/.synod/sessions"
 export SYNOD_RETENTION_DAYS=30
 ```
+
+</details>
+
+<details>
+<summary><b>📝 메모: 다른 PC(Windows)에 설치하기</b></summary>
+
+<br/>
+
+1. 저장소 클론 후 의존성 설치: `py -m pip install -r requirements.txt`
+2. `<클론 경로>\bin`을 사용자 PATH에 추가 (`synod-run`, `gemini-3`, `openai-cli` 호출용)
+3. 환경 변수 `GEMINI_API_KEY`, `OPENAI_API_KEY` 등록
+4. Synod를 쓸 프로젝트의 `.claude/commands/`(또는 `~/.claude/commands/`)에 `skills/synod.md`, `skills/cancel-synod.md` 복사
+5. 복사한 두 파일 안의 Git Bash용 경로 `C:/Users/user/Documents/GitHub/fairy_tail`을 새 PC의 클론 경로로 변경
+6. 확인: PowerShell에서 `echo "reply OK" | openai-cli --model luna` / `echo "reply OK" | gemini-3`
 
 </details>
 
